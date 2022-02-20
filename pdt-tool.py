@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.0.0
-## Updated: 2022-02-19
+## Version: 1.1.0
+## Updated: 2022-02-20
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
 
@@ -20,7 +20,6 @@ import datetime
 import sys
 import re
 import datetime
-import os
 from os import system, name
 from pathlib import Path
 
