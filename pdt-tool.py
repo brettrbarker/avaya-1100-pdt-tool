@@ -21,6 +21,9 @@ import sys
 import re
 import datetime
 import os
+from os import system, name
+from pathlib import Path
+
 
 #GLOBAL VARIABLES
 SSH_Username = 'help'   # Default value if not changed in user prompt.
@@ -32,11 +35,12 @@ IPSet = set()
 
 menu_options = {
     1: 'Set SSH User/Pass',
-    2: 'Get Model, Mac, FW version',
-    3: 'Reboot Phones',
-    4: 'Clear All Phone Logs',
-    5: 'Factory Reset Phones',
-    6: 'Exit',
+    2: 'List IP Addresses',
+    3: 'Get Model, Mac, FW version',
+    4: 'Reboot Phones',
+    5: 'Clear All Phone Logs',
+    6: 'Factory Reset Phones',
+    7: 'Exit',
 }
 
 def print_menu():
@@ -67,19 +71,19 @@ def set_ssh_creds():
         print('New SSH Password set: ' + SSH_Pass)
 
 def option2():
-     os.system('clear')
+     clear()
      print('\nThis feature is coming soon.')
      time.sleep(3)
-     os.system('clear')
+     clear()
 
 def reboot_phones(IPSet):
+    clear()
     clear_results()
     countIPs = len(IPSet)
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO REBOOT ' + str(countIPs) + ' PHONES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
-        print('\nCancelling...\n')
-        time.sleep(2)
+        cancel()
         return
     for ip in IPSet:
         perform_reboot(ip)
@@ -114,13 +118,13 @@ def perform_reboot(ip):
     return    
     
 def clear_phone_logs(IPSet):
+    clear()
     clear_results()
     countIPs = len(IPSet)
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO CLEAR LOGS ON ' + str(countIPs) + ' PHONES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
-        print('\nCancelling...\n')
-        time.sleep(2)
+        cancel()
         return
     for ip in IPSet:
         perform_log_clear(ip)
@@ -167,6 +171,7 @@ def perform_log_clear(ip):
     return
 
 def factory_reset_phone(IPSet):
+    clear()
     # WARNING PROMPT
     countIPs = len(IPSet)
     clear_results()
@@ -174,12 +179,12 @@ def factory_reset_phone(IPSet):
     print('##### WARNING: YOU ARE ABOUT TO ATTEMPT TO FACTORY RESET ' + str(countIPs) + ' PHONES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
-        print('Cancelling...')
+        cancel()
         return 0
     print('##### FINAL WARNING: ARE YOU SURE YOU WANT TO FACTORY RESET? #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
-        print('Cancelling...')
+        cancel()
         return 0
     ## START LOOPING THROUGH ALL IP'S
     for ip in IPSet:
@@ -252,7 +257,7 @@ def process_results(source):
     print('##########################\n')
     time.sleep(1)
     input('Press Enter to Return to Menu')
-    os.system('clear')
+    clear()
 
 def clear_results():
     global fail_hosts
@@ -260,11 +265,35 @@ def clear_results():
     fail_hosts = []
     success_hosts = []
 
+def cancel():
+    print('\nCancelling...\n')
+    time.sleep(1)
+    clear()
+    return
+
+def printIPs():
+    clear()
+    print('IP Addresses to be acted on from ' + inputfile + ':')
+    print(sorted(IPSet))
+    print('\n\n')
+    time.sleep(1)
+    input('Press Enter to Return to Menu')
+    clear()
+
+def clear():
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+ 
+     # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
 
 def start_pdt_tool():
     
     file = open(inputfile,'r') # Open file in read only
     file_dict = csv.DictReader(file) # Read the CSV into a dictionary. Note: Header row of the CSV MUST contain MAC,Phone,
+    Path('known_phones').touch()
 
     ## Check for correct header row with IP field in the input file.
     if not 'IP' in file_dict.fieldnames:
@@ -276,6 +305,7 @@ def start_pdt_tool():
         IPSet.add(row['IP']) # Add IP to set
 
     while(True):
+        clear()
         print_menu()
         option = ''
         try:
@@ -289,15 +319,19 @@ def start_pdt_tool():
             input('Press Enter to return to the menu.')
             print('\n\n')
         elif option == 2:
-            option2()
+            printIPs()
         elif option == 3:
-            reboot_phones(sorted(IPSet))
+            option2()
         elif option == 4:
-            clear_phone_logs(sorted(IPSet))
+            reboot_phones(sorted(IPSet))
         elif option == 5:
-            factory_reset_phone(sorted(IPSet))
+            clear_phone_logs(sorted(IPSet))
         elif option == 6:
-            print('Thank you! Come again!')
+            factory_reset_phone(sorted(IPSet))
+        elif option == 7:
+            print('\nThank you! Come again!')
+            time.sleep(1)
+            clear()
             exit()
         else:
             print('\n***Invalid option. Please enter a number between 1 and 4.\n')
