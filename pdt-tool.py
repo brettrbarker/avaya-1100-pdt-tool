@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.1.0
+## Version: 1.2.0
 ## Updated: 2022-02-20
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
@@ -104,13 +104,10 @@ def getPhoneInfo(Local_IPSet):
     csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC'])
     for key in phoneInfoList.keys():
         data = [key]
-        print(data)
-        print(phoneInfoList[key])
         data = data + phoneInfoList[key]
-        print(data)
         csvwriter.writerow(data)
     f.close()
-
+    print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
     process_results('get_info')
 
 def perform_get_info(ip):
