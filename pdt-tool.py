@@ -69,7 +69,7 @@ def set_ssh_creds():
         SSH_Pass = new_ssh_pass
         print('New SSH Password set: ' + SSH_Pass)
 
-def option2():
+def getPhoneInfo():
      clear()
      print('\nThis feature is coming soon.')
      time.sleep(3)
@@ -320,7 +320,7 @@ def start_pdt_tool():
         elif option == 2:
             printIPs()
         elif option == 3:
-            option2()
+            getPhoneInfo()
         elif option == 4:
             reboot_phones(sorted(IPSet))
         elif option == 5:
