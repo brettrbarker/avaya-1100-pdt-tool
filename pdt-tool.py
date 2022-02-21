@@ -13,7 +13,6 @@
 ########################################BRB####################################################
 
 
-from tkinter import W
 from paramiko import AutoAddPolicy, SSHClient
 import time
 import csv
@@ -26,6 +25,7 @@ from pathlib import Path
 from collections import defaultdict
 
 
+
 #GLOBAL VARIABLES
 SSH_Username = 'help'   # Default value if not changed in user prompt.
 SSH_Pass = '1234'       # Default value if not changed in user prompt.
@@ -35,6 +35,10 @@ fail_hosts = []
 IPSet = set()
 now = datetime.datetime.now()
 output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+results_file_name = 'pdt-tool-' + now.strftime('%Y-%m-%d-%H%M') + '.log'
+outputpath = "pdt-tool-logs"
+results_file = ''
+
 
 menu_options = {
     1: 'Set SSH User/Pass',
@@ -53,6 +57,7 @@ def print_menu():
     print('     SSH User: ' + SSH_Username + '   SSH Password: ' + SSH_Pass)
     print('     Input File: ' + inputfile)
     print('     Total IPs in File: ' + str(len(IPSet)))
+    print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
     print('Please Choose from the following options:')
     for key in menu_options.keys():
@@ -317,9 +322,23 @@ def process_results(source):
         return
     print('\n### Summary of Results ###')
     print('# Task: ' + task)
+    print('# Total Attempted: ' + str(len(IPSet)))
     print('# Successful: ' + str(len(success_hosts)))
     print('# Failures: ' + str(len(fail_hosts)))
     print('##########################\n')
+    results_file.write('Detailed Results for Task: ' + task + '\n')
+    results_file.write('+++ SUCCESSFUL +++\n')
+    for each in success_hosts:
+        results_file.write(str(each) + '\n')
+    results_file.write('--- FAILURES ---\n')
+    for each in fail_hosts:
+        results_file.write(str(each) + '\n')
+    results_file.write('\n### Summary of Results ###\n')
+    results_file.write('# Task: ' + task + '\n')
+    results_file.write('# Total Attempted: ' + str(len(IPSet)) + '\n')
+    results_file.write('# Successful: ' + str(len(success_hosts)) + '\n')
+    results_file.write('# Failures: ' + str(len(fail_hosts)) + '\n')
+    results_file.write('##########################\n\n')
     time.sleep(1)
     input('Press Enter to Return to Menu')
     clear()
@@ -354,6 +373,17 @@ def clear():
     else:
         _ = system('clear')
 
+def results_setup():
+    global results_file_name
+    global now
+    global outputpath
+    global results_file
+
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+    results_file = open(outputpath + '/' + results_file_name, 'a')
+    results_file.write('\n-----\n' + now.strftime('%Y-%m-%d %H:%M') + ' STARTING PDT TOOL\n')
+
+
 def start_pdt_tool():
     
     file = open(inputfile,'r') # Open file in read only
@@ -368,6 +398,8 @@ def start_pdt_tool():
     ## Change CSV dict into a set of IP addresses.
     for row in file_dict:
         IPSet.add(row['IP']) # Add IP to set
+
+    results_setup()
 
     while(True):
         clear()
@@ -394,6 +426,8 @@ def start_pdt_tool():
         elif option == 6:
             factory_reset_phone(sorted(IPSet))
         elif option == 7:
+            file.close()
+            results_file.close()
             print('\nThank you! Come again!')
             time.sleep(1)
             clear()
