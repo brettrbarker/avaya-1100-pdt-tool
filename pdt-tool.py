@@ -22,6 +22,7 @@ import re
 import datetime
 from os import system, name, makedirs
 from pathlib import Path
+from collections import defaultdict
 
 
 
@@ -33,6 +34,7 @@ success_hosts = []
 fail_hosts = []
 IPSet = set()
 now = datetime.datetime.now()
+output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
 results_file_name = 'pdt-tool-' + now.strftime('%Y-%m-%d-%H%M') + '.log'
 outputpath = "pdt-tool-logs"
 results_file = ''
@@ -76,22 +78,82 @@ def set_ssh_creds():
         SSH_Pass = new_ssh_pass
         print('New SSH Password set: ' + SSH_Pass)
 
-def option2():
-     clear()
-     print('\nThis feature is coming soon.')
-     time.sleep(3)
-     clear()
-
-def reboot_phones(IPSet):
+def getPhoneInfo(Local_IPSet):
     clear()
     clear_results()
-    countIPs = len(IPSet)
+    countIPs = len(Local_IPSet)
+    phoneInfoList = defaultdict(list)
+    print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET INFO FROM ' + str(countIPs) + ' PHONES #####')
+    proceed = input('PROCEED? y/N: ')
+    if not proceed.upper() == 'Y':
+        cancel()
+        return
+    for ip in Local_IPSet:
+        r1 = perform_get_info(ip)
+        if not r1 == -1:
+            phoneInfoList[str(ip)].extend(r1)
+        #print(phoneInfoList[ip])
+
+    
+    # Write to CSV
+    outputpath = "output_files"
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+    f = open(outputpath + '/' + output_csv, 'w')
+    
+    csvwriter = csv.writer(f)
+    csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC'])
+    for key in phoneInfoList.keys():
+        data = [key]
+        print(data)
+        print(phoneInfoList[key])
+        data = data + phoneInfoList[key]
+        print(data)
+        csvwriter.writerow(data)
+    f.close()
+
+    process_results('get_info')
+
+def perform_get_info(ip):
+    try:
+        # Set up client and connect
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy)
+        client.load_host_keys('known_phones')
+        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
+
+        # Open Shell on Client
+        chan = client.invoke_shell()
+        out = chan.recv(9999)
+        ## GET Phone Info
+        m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
+        phoneModel = m.group(1)
+        phoneFirmware = m.group(2)
+        phoneMAC = m.group(3)
+        #print(phoneModel + phoneFirmware + phoneMAC)
+        chan.send('bye\n')
+        while not chan.recv_ready():
+            time.sleep(3)
+        out = chan.recv(9999)
+        print('+ Successfully got info for ' + str(ip) + '!')
+        success_hosts.append(ip)
+        chan.close()  # Close Shell Channel
+        client.close() # Close the client itself
+        return phoneModel, phoneFirmware, phoneMAC
+    except:
+        print('- Failed connecting to: ' + str(ip))
+        fail_hosts.append(ip)
+        return -1
+
+def reboot_phones(Local_IPSet):
+    clear()
+    clear_results()
+    countIPs = len(Local_IPSet)
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO REBOOT ' + str(countIPs) + ' PHONES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
         return
-    for ip in IPSet:
+    for ip in Local_IPSet:
         perform_reboot(ip)
 
     process_results('reboot_phones')
@@ -123,16 +185,16 @@ def perform_reboot(ip):
         fail_hosts.append(ip)
     return    
     
-def clear_phone_logs(IPSet):
+def clear_phone_logs(Local_IPSet):
     clear()
     clear_results()
-    countIPs = len(IPSet)
+    countIPs = len(Local_IPSet)
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO CLEAR LOGS ON ' + str(countIPs) + ' PHONES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
         return
-    for ip in IPSet:
+    for ip in Local_IPSet:
         perform_log_clear(ip)
 
     process_results('clear_logs')
@@ -176,10 +238,10 @@ def perform_log_clear(ip):
         fail_hosts.append(ip)
     return
 
-def factory_reset_phone(IPSet):
+def factory_reset_phone(Local_IPSet):
     clear()
     # WARNING PROMPT
-    countIPs = len(IPSet)
+    countIPs = len(Local_IPSet)
     clear_results()
 
     print('##### WARNING: YOU ARE ABOUT TO ATTEMPT TO FACTORY RESET ' + str(countIPs) + ' PHONES #####')
@@ -193,7 +255,7 @@ def factory_reset_phone(IPSet):
         cancel()
         return 0
     ## START LOOPING THROUGH ALL IP'S
-    for ip in IPSet:
+    for ip in Local_IPSet:
         perform_factory_reset(ip)
     process_results('factory_reset')
 
@@ -253,6 +315,8 @@ def process_results(source):
         task = 'Clear Phone Logs'
     elif source == 'factory_reset':
         task = 'Factory Reset Phones'
+    elif source =='get_info':
+        task = 'Get Phone Info'
     else:
         print('Error: Unknown Source Called Results Function.')
         return
@@ -291,10 +355,10 @@ def cancel():
     clear()
     return
 
-def printIPs():
+def printIPs(Local_IPSet):
     clear()
     print('IP Addresses to be acted on from ' + inputfile + ':')
-    print(sorted(IPSet))
+    print(Local_IPSet)
     print('\n\n')
     time.sleep(1)
     input('Press Enter to Return to Menu')
@@ -352,9 +416,9 @@ def start_pdt_tool():
             input('Press Enter to return to the menu.')
             print('\n\n')
         elif option == 2:
-            printIPs()
+            printIPs(sorted(IPSet))
         elif option == 3:
-            option2()
+            getPhoneInfo(sorted(IPSet))
         elif option == 4:
             reboot_phones(sorted(IPSet))
         elif option == 5:
