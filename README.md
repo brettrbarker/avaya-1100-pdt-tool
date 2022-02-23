@@ -1,10 +1,16 @@
 # avaya-1100-pdt-tool
 Friendly tool for interacting with Avaya 1100 series phones using the PDT interface via SSH.
 ## Usage
+With input file of IP addresses:
 ```
 python3 pdt-tool.py -f sample.csv
 ```
-### Example
+OR without an input file:
+```
+python3 pdt-tool.py
+```
+
+### Example with Input File
 ```
 ----------------------------------------------------
 Welcome to the unofficial Avaya 1100 Series PDT Tool
@@ -12,18 +18,65 @@ Welcome to the unofficial Avaya 1100 Series PDT Tool
      SSH User: help   SSH Password: 1234
      Input File: sample.csv
      Total IPs in File: 2
-     Log File: pdt-tool-logs/pdt-tool-2022-02-20-2155.log
+     Log File: pdt-tool-logs/pdt-tool-2022-02-22-2055.log
 ----------------------------------------------------
 Please Choose from the following options:
 1 -- Set SSH User/Pass
-2 -- List IP Addresses
-3 -- Get Model, Mac, FW version
-4 -- Reboot Phones
-5 -- Clear All Phone Logs
-6 -- Factory Reset Phones
-7 -- Exit
+2 -- Set Custom IP Range
+3 -- List IP Addresses
+4 -- Get Model, Mac, FW version
+5 -- Reboot Phones
+6 -- Clear All Phone Logs
+7 -- Factory Reset Phones
+8 -- Exit
 
 
 Enter your choice: 
 ```
+### Example with no input file
+Option 2 will need to be used to set a custom IP range. Note: A custom range can be set even if an input file is provided. The custom range will not overwrite the input file itself, but will make it irrelevant.
+```
+----------------------------------------------------
+Welcome to the unofficial Avaya 1100 Series PDT Tool
+----------------------------------------------------
+     SSH User: help   SSH Password: 1234
+     Input File: None
+     Total IPs in File: 0
+     Log File: pdt-tool-logs/pdt-tool-2022-02-22-2053.log
+----------------------------------------------------
+Please Choose from the following options:
+1 -- Set SSH User/Pass
+2 -- Set Custom IP Range
+3 -- List IP Addresses
+4 -- Get Model, Mac, FW version
+5 -- Reboot Phones
+6 -- Clear All Phone Logs
+7 -- Factory Reset Phones
+8 -- Exit
 
+
+Enter your choice: 
+```
+### Example showing the custom IP range being set
+```
+----------------------------------------------------
+Welcome to the unofficial Avaya 1100 Series PDT Tool
+----------------------------------------------------
+     SSH User: help   SSH Password: 1234
+     CUSTOM IP RANGE: 10.0.1.1 to 10.0.1.150
+     Total IPs in Range: 150
+     Log File: pdt-tool-logs/pdt-tool-2022-02-22-2136.log
+----------------------------------------------------
+Please Choose from the following options:
+1 -- Set SSH User/Pass
+2 -- Set Custom IP Range
+3 -- List IP Addresses
+4 -- Get Model, Mac, FW version
+5 -- Reboot Phones
+6 -- Clear All Phone Logs
+7 -- Factory Reset Phones
+8 -- Exit
+
+
+Enter your choice: 
+```

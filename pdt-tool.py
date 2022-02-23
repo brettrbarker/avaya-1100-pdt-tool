@@ -7,18 +7,16 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.2.0
-## Updated: 2022-02-20
+## Version: 1.3.0
+## Updated: 2022-02-22
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
 
 
-from glob import glob
 from paramiko import AutoAddPolicy, SSHClient
 import time
 import csv
 import datetime
-import sys
 import re
 import datetime
 from os import system, name, makedirs
@@ -29,8 +27,8 @@ import netaddr
 
 
 #GLOBAL VARIABLES
-SSH_Username = 'help'   # Default value if not changed in user prompt.
-SSH_Pass = '1234'       # Default value if not changed in user prompt.
+SSH_Username = 'help'   # Default value if not changed in user prompt. Can be modified here.
+SSH_Pass = '1234'       # Default value if not changed in user prompt. Can be modified here.
 inputfile = ''
 success_hosts = []
 fail_hosts = []
@@ -63,9 +61,10 @@ def print_menu():
     print('     SSH User: ' + SSH_Username + '   SSH Password: ' + SSH_Pass)
     if not customIPs:
         print('     Input File: ' + inputfile)
+        print('     Total IPs in File: ' + str(len(IPSet)))
     else:
         print('     CUSTOM IP RANGE: ' + str(startIP) + ' to ' + str(endIP))
-    print('     Total IPs in File: ' + str(len(IPSet)))
+        print('     Total IPs in Range: ' + str(len(IPSet)))
     print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
     print('Please Choose from the following options:')
@@ -95,11 +94,30 @@ def set_ip_range():
     clear()
     print('Set a new IP address range')
     startIP = input('Start IP: ')
-    endIP = input('End IP: ')
+    try: 
+        netaddr.IPAddress(startIP)
+    except:
+        print('Not a Valid IP Address')
+        startIP = ''
+        time.sleep(2)
+        return
+    endIP = input('End IP [' + startIP +']: ')
+    if not endIP:
+        endIP = startIP
+    try: 
+        netaddr.IPAddress(endIP)
+    except:
+        print('Not a Valid IP Address')
+        endIP = ''
+        time.sleep(2)
+        return
     ips = netaddr.iter_iprange(startIP,endIP)
     iplist= list(ips)
     IPSet = [str(x) for x in iplist]
     customIPs = True
+    print('Custom IP Range Set.')
+    print (startIP + ' to ' + endIP)
+    time.sleep(2)
 
 def getPhoneInfo(Local_IPSet):
     clear()
