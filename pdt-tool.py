@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.2.0
-## Updated: 2022-02-20
+## Version: 1.3.0
+## Updated: 2022-02-22
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
 
@@ -17,18 +17,18 @@ from paramiko import AutoAddPolicy, SSHClient
 import time
 import csv
 import datetime
-import sys
 import re
 import datetime
 from os import system, name, makedirs
 from pathlib import Path
 from collections import defaultdict
+import netaddr
 
 
 
 #GLOBAL VARIABLES
-SSH_Username = 'help'   # Default value if not changed in user prompt.
-SSH_Pass = '1234'       # Default value if not changed in user prompt.
+SSH_Username = 'help'   # Default value if not changed in user prompt. Can be modified here.
+SSH_Pass = '1234'       # Default value if not changed in user prompt. Can be modified here.
 inputfile = ''
 success_hosts = []
 fail_hosts = []
@@ -38,16 +38,20 @@ output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
 results_file_name = 'pdt-tool-' + now.strftime('%Y-%m-%d-%H%M') + '.log'
 outputpath = "pdt-tool-logs"
 results_file = ''
+startIP = ''
+endIP = ''
+customIPs = False
 
 
 menu_options = {
     1: 'Set SSH User/Pass',
-    2: 'List IP Addresses',
-    3: 'Get Model, Mac, FW version',
-    4: 'Reboot Phones',
-    5: 'Clear All Phone Logs',
-    6: 'Factory Reset Phones',
-    7: 'Exit',
+    2: 'Set Custom IP Range',
+    3: 'List IP Addresses',
+    4: 'Get Model, Mac, FW version',
+    5: 'Reboot Phones',
+    6: 'Clear All Phone Logs',
+    7: 'Factory Reset Phones',
+    8: 'Exit',
 }
 
 def print_menu():
@@ -55,8 +59,12 @@ def print_menu():
     print('Welcome to the unofficial Avaya 1100 Series PDT Tool')
     print('----------------------------------------------------')
     print('     SSH User: ' + SSH_Username + '   SSH Password: ' + SSH_Pass)
-    print('     Input File: ' + inputfile)
-    print('     Total IPs in File: ' + str(len(IPSet)))
+    if not customIPs:
+        print('     Input File: ' + inputfile)
+        print('     Total IPs in File: ' + str(len(IPSet)))
+    else:
+        print('     CUSTOM IP RANGE: ' + str(startIP) + ' to ' + str(endIP))
+        print('     Total IPs in Range: ' + str(len(IPSet)))
     print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
     print('Please Choose from the following options:')
@@ -77,6 +85,39 @@ def set_ssh_creds():
     if new_ssh_pass:
         SSH_Pass = new_ssh_pass
         print('New SSH Password set: ' + SSH_Pass)
+
+def set_ip_range():
+    global IPSet
+    global customIPs
+    global startIP
+    global endIP
+    clear()
+    print('Set a new IP address range')
+    startIP = input('Start IP: ')
+    try: 
+        netaddr.IPAddress(startIP)
+    except:
+        print('Not a Valid IP Address')
+        startIP = ''
+        time.sleep(2)
+        return
+    endIP = input('End IP [' + startIP +']: ')
+    if not endIP:
+        endIP = startIP
+    try: 
+        netaddr.IPAddress(endIP)
+    except:
+        print('Not a Valid IP Address')
+        endIP = ''
+        time.sleep(2)
+        return
+    ips = netaddr.iter_iprange(startIP,endIP)
+    iplist= list(ips)
+    IPSet = [str(x) for x in iplist]
+    customIPs = True
+    print('Custom IP Range Set.')
+    print (startIP + ' to ' + endIP)
+    time.sleep(2)
 
 def getPhoneInfo(Local_IPSet):
     clear()
@@ -354,7 +395,10 @@ def cancel():
 
 def printIPs(Local_IPSet):
     clear()
-    print('IP Addresses to be acted on from ' + inputfile + ':')
+    if not customIPs:
+        print('IP Addresses to be acted on from ' + inputfile + ':')
+    else: 
+        print('IP Addresses to be acted on from CUSTOM Range of ' + startIP + ' to ' + endIP)
     print(Local_IPSet)
     print('\n\n')
     time.sleep(1)
@@ -382,19 +426,19 @@ def results_setup():
 
 
 def start_pdt_tool():
-    
-    file = open(inputfile,'r') # Open file in read only
-    file_dict = csv.DictReader(file) # Read the CSV into a dictionary. Note: Header row of the CSV MUST contain MAC,Phone,
-    Path('known_phones').touch()
+    if not inputfile == 'None':
+        file = open(inputfile,'r') # Open file in read only
+        file_dict = csv.DictReader(file) # Read the CSV into a dictionary. Note: Header row of the CSV MUST contain MAC,Phone,
 
-    ## Check for correct header row with IP field in the input file.
-    if not 'IP' in file_dict.fieldnames:
-        print('Error: ' + inputfile + ' does not contain a header row with "IP"\n')
-        file.close() # Close the input file before erroring out.
-        return
-    ## Change CSV dict into a set of IP addresses.
-    for row in file_dict:
-        IPSet.add(row['IP']) # Add IP to set
+        ## Check for correct header row with IP field in the input file.
+        if not 'IP' in file_dict.fieldnames:
+            print('Error: ' + inputfile + ' does not contain a header row with "IP"\n')
+            file.close() # Close the input file before erroring out.
+            return
+        ## Change CSV dict into a set of IP addresses.
+        for row in file_dict:
+            IPSet.add(row['IP']) # Add IP to set
+    Path('known_phones').touch()
 
     results_setup()
 
@@ -413,29 +457,32 @@ def start_pdt_tool():
             input('Press Enter to return to the menu.')
             print('\n\n')
         elif option == 2:
-            printIPs(sorted(IPSet))
+            set_ip_range()
         elif option == 3:
-            getPhoneInfo(sorted(IPSet))
+            printIPs(sorted(IPSet))
         elif option == 4:
-            reboot_phones(sorted(IPSet))
+            getPhoneInfo(sorted(IPSet))
         elif option == 5:
-            clear_phone_logs(sorted(IPSet))
+            reboot_phones(sorted(IPSet))
         elif option == 6:
-            factory_reset_phone(sorted(IPSet))
+            clear_phone_logs(sorted(IPSet))
         elif option == 7:
-            file.close()
+            factory_reset_phone(sorted(IPSet))
+        elif option == 8:
+            if not inputfile == 'None':
+                file.close()
             results_file.close()
             print('\nThank you! Come again!')
             time.sleep(1)
             clear()
             exit()
         else:
-            print('\n***Invalid option. Please enter a number between 1 and 4.\n')
+            print('\n***Invalid option. Please enter a number between 1 and 8.\n')
 
 if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Input CSV File')
-    parser.add_argument("-f", "--file", required=True, help='Filename or path to CSV input file containing phone IP addresses.')
+    parser.add_argument("-f", "--file", required=False, help='Filename or path to CSV input file containing phone IP addresses.')
     args = parser.parse_args()
     inputfile = str(args.file)
 
