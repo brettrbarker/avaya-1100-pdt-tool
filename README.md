@@ -1,5 +1,15 @@
 # avaya-1100-pdt-tool
 Friendly tool for interacting with Avaya 1100 series phones using the PDT interface via SSH.
+## Installation
+To install the dependencies on an online system:
+```
+pip install -r requirements
+```
+To install the dependencies on an offline system:
+```
+pip install -f dependencies/*
+```
+
 ## Usage
 With input file of IP addresses:
 ```
