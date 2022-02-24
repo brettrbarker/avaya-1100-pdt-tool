@@ -216,8 +216,12 @@ def perform_reboot(ip):
         if 'Rebooting!' in out.decode("ascii"):
             print('+ Successfully rebooted ' + str(ip) + '!')
             success_hosts.append(ip)
+            chan.close()  # Close Shell Channel
+            client.close() # Close the client itself
         else:
             fail_hosts.append(ip)
+            chan.close()  # Close Shell Channel
+            client.close() # Close the client itself
     except:
         print('- Failed connecting to: ' + str(ip))
         fail_hosts.append(ip)
@@ -270,6 +274,8 @@ def perform_log_clear(ip):
         while not chan.recv_ready():
             time.sleep(3)
         out = chan.recv(9999)
+        chan.close()  # Close Shell Channel
+        client.close() # Close the client itself
         
     except:
         print('- Failed connecting to: ' + str(ip))
