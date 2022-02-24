@@ -1,3 +1,9 @@
+#PDT ignore:
+.devcontainer/
+output_files/
+pdt-tool-logs/
+known_phones
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
