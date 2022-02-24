@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.3.0
+## Version: 1.3.1
 ## Updated: 2022-02-22
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
