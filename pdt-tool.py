@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.3.1
-## Updated: 2022-02-22
+## Version: 1.3.2
+## Updated: 2022-02-24
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ########################################BRB####################################################
 
@@ -254,11 +254,16 @@ def perform_log_clear(ip):
         #print('-----Invoking shell')
         chan = client.invoke_shell()
         out = chan.recv(9999)
+        ecrCleared = False
+        sipCleared = False
         ## CLEAR LOG 0
         chan.send('clearlog 0\n')
         while not chan.recv_ready():
             time.sleep(3)
         out = chan.recv(9999)
+        if 'cleared' in out.decode("ascii"):
+            print('+ Successfully cleared ECR Log File for ' + str(ip) + '!')
+            ecrCleared = True
         ## CLEAR LOG 1
         chan.send('clearlog 1\n')
         while not chan.recv_ready():
@@ -266,14 +271,16 @@ def perform_log_clear(ip):
         out = chan.recv(9999)
         #print(out.decode("ascii"))
         if 'cleared' in out.decode("ascii"):
-            print('+ Successfully cleared logs for ' + str(ip) + '!')
+            print('+ Successfully cleared SIP Log File for ' + str(ip) + '!')
+            sipCleared = True
+        if ecrCleared and sipCleared:
             success_hosts.append(ip)
         else:
             fail_hosts.append(ip)
         chan.send('bye\n')
-        while not chan.recv_ready():
-            time.sleep(3)
-        out = chan.recv(9999)
+        #while not chan.recv_ready():  # Shouldn't need to listen for data after the bye
+        #    time.sleep(3)
+        #out = chan.recv(9999)
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
         
