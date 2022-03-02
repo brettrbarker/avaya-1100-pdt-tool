@@ -1,5 +1,6 @@
 #PDT ignore:
 .devcontainer/
+test-rpms/
 output_files/
 pdt-tool-logs/
 known_phones
