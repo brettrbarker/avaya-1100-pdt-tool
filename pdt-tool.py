@@ -169,9 +169,9 @@ def perform_get_info(ip):
         phoneMAC = m.group(3)
         #print(phoneModel + phoneFirmware + phoneMAC)
         chan.send('bye\n')
-        while not chan.recv_ready():
-            time.sleep(3)
-        out = chan.recv(9999)
+        #while not chan.recv_ready():
+        #    time.sleep(3)
+        #out = chan.recv(9999)
         print('+ Successfully got info for ' + str(ip) + '!')
         success_hosts.append(ip)
         chan.close()  # Close Shell Channel
