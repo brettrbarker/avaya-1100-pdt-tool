@@ -47,11 +47,12 @@ menu_options = {
     1: 'Set SSH User/Pass',
     2: 'Set Custom IP Range',
     3: 'List IP Addresses',
-    4: 'Get Model, Mac, FW version',
-    5: 'Reboot Phones',
-    6: 'Clear All Phone Logs',
-    7: 'Factory Reset Phones',
-    8: 'Exit',
+    4: 'Ping All IPs',
+    5: 'Get Model, Mac, FW version',
+    6: 'Reboot Phones',
+    7: 'Clear All Phone Logs',
+    8: 'Factory Reset Phones',
+    9: 'Exit',
 }
 
 def print_menu():
@@ -368,6 +369,8 @@ def process_results(source):
         task = 'Factory Reset Phones'
     elif source =='get_info':
         task = 'Get Phone Info'
+    elif source == 'ping_ip':
+        task = 'Ping All IPs'
     else:
         print('Error: Unknown Source Called Results Function.')
         return
@@ -417,6 +420,41 @@ def printIPs(Local_IPSet):
     time.sleep(1)
     input('Press Enter to Return to Menu')
     clear()
+
+def pingIPs(Local_IPSet):
+    clear()
+    clear_results()
+    countIPs = len(Local_IPSet)
+    phoneInfoList = defaultdict(list)
+    print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET INFO FROM ' + str(countIPs) + ' PHONES #####')
+    proceed = input('PROCEED? y/N: ')
+    if not proceed.upper() == 'Y':
+        cancel()
+        return
+    outputpath = "output_files"
+    pingresultsfile = 'ping-results-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+    f = open(outputpath + '/' + pingresultsfile, 'w')
+    csvwriter = csv.writer(f)
+    csvwriter.writerow(['IP', 'Ping'])
+    
+    for ip in Local_IPSet:
+        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        if not response == 0:
+            print('- Ping Failed to: ' + str(ip))
+            fail_hosts.append(ip)
+            return -1
+            
+
+    
+
+    for key in phoneInfoList.keys():
+        data = [key]
+        data = data + phoneInfoList[key]
+        csvwriter.writerow(data)
+    f.close()
+    print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
+    process_results('get_info')
 
 def clear():
     # for windows
@@ -474,14 +512,16 @@ def start_pdt_tool():
         elif option == 3:
             printIPs(sorted(IPSet))
         elif option == 4:
-            getPhoneInfo(sorted(IPSet))
+            pingIPs(sorted(IPSet))
         elif option == 5:
-            reboot_phones(sorted(IPSet))
+            getPhoneInfo(sorted(IPSet))
         elif option == 6:
-            clear_phone_logs(sorted(IPSet))
+            reboot_phones(sorted(IPSet))
         elif option == 7:
-            factory_reset_phone(sorted(IPSet))
+            clear_phone_logs(sorted(IPSet))
         elif option == 8:
+            factory_reset_phone(sorted(IPSet))
+        elif option == 9:
             if not inputfile == 'None':
                 file.close()
             results_file.close()
