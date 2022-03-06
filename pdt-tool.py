@@ -32,6 +32,8 @@ SSH_Pass = '1234'       # Default value if not changed in user prompt. Can be mo
 inputfile = ''
 success_hosts = []
 fail_hosts = []
+numSuccess = 0
+numFail = 0
 IPSet = set()
 now = datetime.datetime.now()
 output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
@@ -400,8 +402,12 @@ def process_results(source):
 def clear_results():
     global fail_hosts
     global success_hosts
+    global numSuccess
+    global numFail
     fail_hosts = []
     success_hosts = []
+    numSuccess = 0
+    numFail = 0
 
 def cancel():
     print('\nCancelling...\n')
@@ -425,8 +431,7 @@ def pingIPs(Local_IPSet):
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
-    phoneInfoList = defaultdict(list)
-    print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET INFO FROM ' + str(countIPs) + ' PHONES #####')
+    print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO PING ' + str(countIPs) + ' IP ADDRESSES #####')
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
@@ -440,21 +445,22 @@ def pingIPs(Local_IPSet):
     
     for ip in Local_IPSet:
         response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        status = True
         if not response == 0:
             print('- Ping Failed to: ' + str(ip))
+            status = False
             fail_hosts.append(ip)
-            return -1
-            
 
-    
-
-    for key in phoneInfoList.keys():
-        data = [key]
-        data = data + phoneInfoList[key]
+        data = [str(ip),str(status)]
+        if status == True:
+            numSuccess =+ 1
+            print('+ Successfully pinged: ' + str(ip))
+            success_hosts.append(ip)
         csvwriter.writerow(data)
+
     f.close()
-    print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
-    process_results('get_info')
+    print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
+    process_results('ping_ip')
 
 def clear():
     # for windows
@@ -510,17 +516,17 @@ def start_pdt_tool():
         elif option == 2:
             set_ip_range()
         elif option == 3:
-            printIPs(sorted(IPSet))
+            printIPs(IPSet)
         elif option == 4:
-            pingIPs(sorted(IPSet))
+            pingIPs(IPSet)
         elif option == 5:
-            getPhoneInfo(sorted(IPSet))
+            getPhoneInfo(IPSet)
         elif option == 6:
-            reboot_phones(sorted(IPSet))
+            reboot_phones(IPSet)
         elif option == 7:
-            clear_phone_logs(sorted(IPSet))
+            clear_phone_logs(IPSet)
         elif option == 8:
-            factory_reset_phone(sorted(IPSet))
+            factory_reset_phone(IPSet)
         elif option == 9:
             if not inputfile == 'None':
                 file.close()
@@ -530,7 +536,7 @@ def start_pdt_tool():
             clear()
             exit()
         else:
-            print('\n***Invalid option. Please enter a number between 1 and 8.\n')
+            print('\n***Invalid option. Please enter a number between 1 and 9.\n')
 
 if __name__=='__main__':
     import argparse
