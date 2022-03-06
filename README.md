@@ -34,11 +34,12 @@ Please Choose from the following options:
 1 -- Set SSH User/Pass
 2 -- Set Custom IP Range
 3 -- List IP Addresses
-4 -- Get Model, Mac, FW version
-5 -- Reboot Phones
-6 -- Clear All Phone Logs
-7 -- Factory Reset Phones
-8 -- Exit
+4 -- Ping All IPs
+5 -- Get Model, Mac, FW version
+6 -- Reboot Phones
+7 -- Clear All Phone Logs
+8 -- Factory Reset Phones
+9 -- Exit
 
 
 Enter your choice: 
@@ -58,11 +59,12 @@ Please Choose from the following options:
 1 -- Set SSH User/Pass
 2 -- Set Custom IP Range
 3 -- List IP Addresses
-4 -- Get Model, Mac, FW version
-5 -- Reboot Phones
-6 -- Clear All Phone Logs
-7 -- Factory Reset Phones
-8 -- Exit
+4 -- Ping All IPs
+5 -- Get Model, Mac, FW version
+6 -- Reboot Phones
+7 -- Clear All Phone Logs
+8 -- Factory Reset Phones
+9 -- Exit
 
 
 Enter your choice: 
@@ -81,11 +83,12 @@ Please Choose from the following options:
 1 -- Set SSH User/Pass
 2 -- Set Custom IP Range
 3 -- List IP Addresses
-4 -- Get Model, Mac, FW version
-5 -- Reboot Phones
-6 -- Clear All Phone Logs
-7 -- Factory Reset Phones
-8 -- Exit
+4 -- Ping All IPs
+5 -- Get Model, Mac, FW version
+6 -- Reboot Phones
+7 -- Clear All Phone Logs
+8 -- Factory Reset Phones
+9 -- Exit
 
 
 Enter your choice: 
