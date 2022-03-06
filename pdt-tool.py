@@ -7,9 +7,14 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.3.3
+## Version: 1.4.0
 ## Updated: 2022-03-01
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
+##
+## CHANGELOG:
+## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
+##
+##
 ########################################BRB####################################################
 
 
