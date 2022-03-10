@@ -48,6 +48,7 @@ results_file = ''
 startIP = ''
 endIP = ''
 customIPs = False
+customPingIPs = False
 
 
 menu_options = {
@@ -67,11 +68,14 @@ def print_menu():
     print('Welcome to the unofficial Avaya 1100 Series PDT Tool')
     print('----------------------------------------------------')
     print('     SSH User: ' + SSH_Username + '   SSH Password: ' + SSH_Pass)
-    if not customIPs:
+    if not customIPs and not customPingIPs:
         print('     Input File: ' + inputfile)
         print('     Total IPs in File: ' + str(len(IPSet)))
-    else:
+    elif customIPs and not customPingIPs:
         print('     CUSTOM IP RANGE: ' + str(startIP) + ' to ' + str(endIP))
+        print('     Total IPs in Range: ' + str(len(IPSet)))
+    else:
+        print('     CUSTOM IP RANGE: SUCCESSFUL PINGS')
         print('     Total IPs in Range: ' + str(len(IPSet)))
     print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
@@ -433,6 +437,8 @@ def printIPs(Local_IPSet):
     clear()
 
 def pingIPs(Local_IPSet):
+    global IPSet
+    global customPingIPs
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
@@ -466,6 +472,12 @@ def pingIPs(Local_IPSet):
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
     process_results('ping_ip')
+
+    proceed = input('Set the Successful Pings as New List? y/N: ')
+    if not proceed.upper() == 'Y':
+        return
+    IPSet = success_hosts
+    customPingIPs = True
 
 def clear():
     # for windows
