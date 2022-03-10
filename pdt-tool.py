@@ -542,6 +542,7 @@ def start_pdt_tool():
             exit()
         else:
             print('\n***Invalid option. Please enter a number between 1 and 9.\n')
+            time.sleep(2)
 
 if __name__=='__main__':
     import argparse
