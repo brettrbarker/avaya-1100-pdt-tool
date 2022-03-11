@@ -514,6 +514,13 @@ def start_pdt_tool():
         ## Look for Ping Header
         if 'Ping' in file_dict.fieldnames:
             usePing = input('This file has Ping values. Only Use Successful Ping results? y/N: ')
+            if usePing.upper() == 'Y':
+                print('Importing only successfully pinged (True) IP addresses from file...')
+                time.sleep(1)
+            else:
+                print('Importing ALL IP addresses from file...')
+                time.sleep(1)
+
 
         ## Change CSV dict into a set of IP addresses.
         for row in file_dict:
