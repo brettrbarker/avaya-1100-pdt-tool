@@ -7,12 +7,14 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.4.0
-## Updated: 2022-03-01
+## Version: 1.4.1
+## Updated: 2022-03-10
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
 ## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
+## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
+##         as a header in the input file and ask if you only want to use "True" values.
 ##
 ##
 ########################################BRB####################################################
@@ -48,6 +50,7 @@ results_file = ''
 startIP = ''
 endIP = ''
 customIPs = False
+customPingIPs = False
 
 
 menu_options = {
@@ -67,11 +70,14 @@ def print_menu():
     print('Welcome to the unofficial Avaya 1100 Series PDT Tool')
     print('----------------------------------------------------')
     print('     SSH User: ' + SSH_Username + '   SSH Password: ' + SSH_Pass)
-    if not customIPs:
+    if not customIPs and not customPingIPs:
         print('     Input File: ' + inputfile)
         print('     Total IPs in File: ' + str(len(IPSet)))
-    else:
+    elif customIPs and not customPingIPs:
         print('     CUSTOM IP RANGE: ' + str(startIP) + ' to ' + str(endIP))
+        print('     Total IPs in Range: ' + str(len(IPSet)))
+    else:
+        print('     CUSTOM IP RANGE: SUCCESSFUL PINGS')
         print('     Total IPs in Range: ' + str(len(IPSet)))
     print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
@@ -433,6 +439,8 @@ def printIPs(Local_IPSet):
     clear()
 
 def pingIPs(Local_IPSet):
+    global IPSet
+    global customPingIPs
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
@@ -467,6 +475,12 @@ def pingIPs(Local_IPSet):
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
     process_results('ping_ip')
 
+    proceed = input('Set the Successful Pings as New List? y/N: ')
+    if not proceed.upper() == 'Y':
+        return
+    IPSet = success_hosts
+    customPingIPs = True
+
 def clear():
     # for windows
     if name == 'nt':
@@ -497,9 +511,17 @@ def start_pdt_tool():
             print('Error: ' + inputfile + ' does not contain a header row with "IP"\n')
             file.close() # Close the input file before erroring out.
             return
+        ## Look for Ping Header
+        if 'Ping' in file_dict.fieldnames:
+            usePing = input('This file has Ping values. Only Use Successful Ping results? y/N: ')
+
         ## Change CSV dict into a set of IP addresses.
         for row in file_dict:
-            IPSet.add(row['IP']) # Add IP to set
+            if usePing.upper() == 'Y':
+                if row['Ping'] == 'True':
+                    IPSet.add(row['IP']) # Add IP to set
+            else:
+                IPSet.add(row['IP']) # Add IP to set
     Path('known_phones').touch()
 
     results_setup()
