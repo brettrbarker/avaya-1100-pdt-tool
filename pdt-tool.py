@@ -7,12 +7,14 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.4.0
-## Updated: 2022-03-01
+## Version: 1.4.1
+## Updated: 2022-03-10
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
 ## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
+## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
+##         as a header in the input file and ask if you only want to use "True" values.
 ##
 ##
 ########################################BRB####################################################
@@ -509,9 +511,17 @@ def start_pdt_tool():
             print('Error: ' + inputfile + ' does not contain a header row with "IP"\n')
             file.close() # Close the input file before erroring out.
             return
+        ## Look for Ping Header
+        if 'Ping' in file_dict.fieldnames:
+            usePing = input('This file has Ping values. Only Use Successful Ping results? y/N: ')
+
         ## Change CSV dict into a set of IP addresses.
         for row in file_dict:
-            IPSet.add(row['IP']) # Add IP to set
+            if usePing.upper() == 'Y':
+                if row['Ping'] == 'True':
+                    IPSet.add(row['IP']) # Add IP to set
+            else:
+                IPSet.add(row['IP']) # Add IP to set
     Path('known_phones').touch()
 
     results_setup()
