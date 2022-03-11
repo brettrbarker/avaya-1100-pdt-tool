@@ -475,11 +475,11 @@ def pingIPs(Local_IPSet):
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
     process_results('ping_ip')
 
+    # Prompt to set successful pings as new list
     proceed = input('Set the Successful Pings as New List? y/N: ')
-    if not proceed.upper() == 'Y':
-        return
-    IPSet = success_hosts
-    customPingIPs = True
+    if proceed.upper() == 'Y':
+        IPSet = success_hosts
+        customPingIPs = True
 
 def clear():
     # for windows
@@ -518,8 +518,8 @@ def start_pdt_tool():
         ## Change CSV dict into a set of IP addresses.
         for row in file_dict:
             if usePing.upper() == 'Y':
-                if row['Ping'] == 'True':
-                    IPSet.add(row['IP']) # Add IP to set
+                if row['Ping'] == 'True':  # Look for Ping True
+                    IPSet.add(row['IP']) # Only add IP if Ping was True in the file
             else:
                 IPSet.add(row['IP']) # Add IP to set
     Path('known_phones').touch()
