@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.4.1
+## Version: 1.4.2
 ## Updated: 2022-03-10
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -15,7 +15,7 @@
 ## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
 ## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
 ##         as a header in the input file and ask if you only want to use "True" values.
-##
+## 1.4.2 - Bug fix when using an input file that does not have ping values.
 ##
 ########################################BRB####################################################
 
@@ -503,6 +503,7 @@ def results_setup():
 
 def start_pdt_tool():
     if not inputfile == 'None':
+        usePing = 'n'
         file = open(inputfile,'r') # Open file in read only
         file_dict = csv.DictReader(file) # Read the CSV into a dictionary. Note: Header row of the CSV MUST contain MAC,Phone,
 
