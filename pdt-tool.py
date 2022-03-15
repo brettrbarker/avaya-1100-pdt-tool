@@ -557,6 +557,7 @@ def results_setup():
 
 def start_pdt_tool():
     if not inputfile == 'None':
+        usePing = 'n'
         file = open(inputfile,'r') # Open file in read only
         file_dict = csv.DictReader(file) # Read the CSV into a dictionary. Note: Header row of the CSV MUST contain MAC,Phone,
 
