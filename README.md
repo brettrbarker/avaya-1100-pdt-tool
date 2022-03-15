@@ -36,10 +36,11 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Reboot Phones
-7 -- Clear All Phone Logs
-8 -- Factory Reset Phones
-9 -- Exit
+6 -- Get Phone Screen Data
+7 -- Reboot Phones
+8 -- Clear All Phone Logs
+9 -- Factory Reset Phones
+0 -- Exit
 
 
 Enter your choice: 
@@ -61,10 +62,11 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Reboot Phones
-7 -- Clear All Phone Logs
-8 -- Factory Reset Phones
-9 -- Exit
+6 -- Get Phone Screen Data
+7 -- Reboot Phones
+8 -- Clear All Phone Logs
+9 -- Factory Reset Phones
+0 -- Exit
 
 
 Enter your choice: 
@@ -85,10 +87,11 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Reboot Phones
-7 -- Clear All Phone Logs
-8 -- Factory Reset Phones
-9 -- Exit
+6 -- Get Phone Screen Data
+7 -- Reboot Phones
+8 -- Clear All Phone Logs
+9 -- Factory Reset Phones
+0 -- Exit
 
 
 Enter your choice: 

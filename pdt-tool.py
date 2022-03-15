@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.5.0
+## Version: 1.5.1
 ## Updated: 2022-03-14
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -16,6 +16,7 @@
 ## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
 ##         as a header in the input file and ask if you only want to use "True" values.
 ## 1.5.0 - Added feature to get phone screen data using reportWindowData command
+## 1.5.1 - Added IP validation to input file IP addresses
 ##
 ########################################BRB####################################################
 
@@ -581,9 +582,19 @@ def start_pdt_tool():
         for row in file_dict:
             if usePing.upper() == 'Y':
                 if row['Ping'] == 'True':  # Look for Ping True
-                    IPSet.add(row['IP']) # Only add IP if Ping was True in the file
+                    try: # Adding IP validation to input file
+                        netaddr.IPAddress(row['IP'])
+                        IPSet.add(row['IP']) # Only add IP if Ping was True in the file
+                    except:
+                        print(str(row['IP']) + ' is Not a Valid IP Address')
+                        time.sleep(2)
             else:
-                IPSet.add(row['IP']) # Add IP to set
+                try: # Adding IP validation to input file
+                    netaddr.IPAddress(row['IP'])
+                    IPSet.add(row['IP']) # Only add IP if Ping was True in the file
+                except:
+                    print(str(row['IP']) + ' is Not a Valid IP Address')
+                    time.sleep(2)
     Path('known_phones').touch()
 
     results_setup()
