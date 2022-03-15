@@ -7,15 +7,15 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.4.2
-## Updated: 2022-03-10
+## Version: 1.5.0
+## Updated: 2022-03-14
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
 ## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
 ## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
 ##         as a header in the input file and ask if you only want to use "True" values.
-## 1.4.2 - Bug fix when using an input file that does not have ping values.
+## 1.5.0 - Added feature to get phone screen data using reportWindowData command
 ##
 ########################################BRB####################################################
 
@@ -44,6 +44,7 @@ numFail = 0
 IPSet = set()
 now = datetime.datetime.now()
 output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
 results_file_name = 'pdt-tool-' + now.strftime('%Y-%m-%d-%H%M') + '.log'
 outputpath = "pdt-tool-logs"
 results_file = ''
@@ -59,10 +60,11 @@ menu_options = {
     3: 'List IP Addresses',
     4: 'Ping All IPs',
     5: 'Get Model, Mac, FW version',
-    6: 'Reboot Phones',
-    7: 'Clear All Phone Logs',
-    8: 'Factory Reset Phones',
-    9: 'Exit',
+    6: 'Get Phone Screen Data',
+    7: 'Reboot Phones',
+    8: 'Clear All Phone Logs',
+    9: 'Factory Reset Phones',
+    0: 'Exit',
 }
 
 def print_menu():
@@ -191,6 +193,54 @@ def perform_get_info(ip):
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
         return phoneModel, phoneFirmware, phoneMAC
+    except:
+        print('- Failed connecting to: ' + str(ip))
+        fail_hosts.append(ip)
+        return -1
+
+def getPhoneScreen(Local_IPSet):
+    clear()
+    clear_results()
+    countIPs = len(Local_IPSet)
+    print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET PHONE SCREEN INFO FROM ' + str(countIPs) + ' PHONES #####')
+    proceed = input('PROCEED? y/N: ')
+    if not proceed.upper() == 'Y':
+        cancel()
+        return
+    outputpath = "output_files"
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+    f = open(outputpath + '/' + windowData_file, 'w')
+        
+    for ip in Local_IPSet:
+        window = performScreenGrab(ip)
+        if not window == -1:
+            f.write('\n\n##### Window Data for ' + str(ip) + ' #####\n')
+            f.write(window.decode("ascii"))
+    f.close()
+    print('\n*****\nOutput File Saved To: ' + outputpath + '/' + windowData_file + '\n*****')
+    process_results('get_window')
+
+def performScreenGrab(ip):
+    try:
+        # Set up client and connect
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy)
+        client.load_host_keys('known_phones')
+        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
+
+        # Open Shell on Client
+        chan = client.invoke_shell()
+        out = chan.recv(9999)
+        chan.send('reportWindowData\n')
+        while not chan.recv_ready():
+            time.sleep(3)
+        out = chan.recv(9999)
+        print('+ Successfully grabbed screen info for ' + str(ip) + '!')
+        success_hosts.append(ip)
+        chan.send('bye\n')
+        chan.close()  # Close Shell Channel
+        client.close() # Close the client itself
+        return out
     except:
         print('- Failed connecting to: ' + str(ip))
         fail_hosts.append(ip)
@@ -384,8 +434,12 @@ def process_results(source):
         task = 'Get Phone Info'
     elif source == 'ping_ip':
         task = 'Ping All IPs'
+    elif source == 'get_window':
+        task = 'Report Window Data'
     else:
         print('Error: Unknown Source Called Results Function.')
+        time.sleep(1)
+        input('Press Enter to Return to Menu')
         return
     print('\n### Summary of Results ###')
     print('# Task: ' + task)
@@ -557,12 +611,14 @@ def start_pdt_tool():
         elif option == 5:
             getPhoneInfo(IPSet)
         elif option == 6:
-            reboot_phones(IPSet)
+            getPhoneScreen(IPSet)
         elif option == 7:
-            clear_phone_logs(IPSet)
+            reboot_phones(IPSet)
         elif option == 8:
-            factory_reset_phone(IPSet)
+            clear_phone_logs(IPSet)
         elif option == 9:
+            factory_reset_phone(IPSet)
+        elif option == 0:
             if not inputfile == 'None':
                 file.close()
             results_file.close()
@@ -571,7 +627,7 @@ def start_pdt_tool():
             clear()
             exit()
         else:
-            print('\n***Invalid option. Please enter a number between 1 and 9.\n')
+            print('\n***Invalid option. Please enter a number between 1 and 0.\n')
             time.sleep(2)
 
 if __name__=='__main__':
