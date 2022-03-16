@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.5.1
-## Updated: 2022-03-14
+## Version: 1.5.2
+## Updated: 2022-03-15
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -17,6 +17,9 @@
 ##         as a header in the input file and ask if you only want to use "True" values.
 ## 1.5.0 - Added feature to get phone screen data using reportWindowData command
 ## 1.5.1 - Added IP validation to input file IP addresses
+## 1.5.2 - Added MAC address to reportWindowData file. 
+##         Added wait timers to all SSH invokes to try to increase reliability.
+##
 ##
 ########################################BRB####################################################
 
@@ -178,6 +181,8 @@ def perform_get_info(ip):
 
         # Open Shell on Client
         chan = client.invoke_shell()
+        while not chan.recv_ready():
+            time.sleep(1)
         out = chan.recv(9999)
         ## GET Phone Info
         m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
@@ -213,10 +218,10 @@ def getPhoneScreen(Local_IPSet):
     f = open(outputpath + '/' + windowData_file, 'w')
         
     for ip in Local_IPSet:
-        window = performScreenGrab(ip)
+        window,MAC = performScreenGrab(ip)
         if not window == -1:
-            f.write('\n\n##### Window Data for ' + str(ip) + ' #####\n')
-            f.write(window.decode("ascii"))
+            f.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + MAC + ' #####\n\n')
+            f.write(window.decode("ascii") + '\n\n')
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + windowData_file + '\n*****')
     process_results('get_window')
@@ -231,7 +236,12 @@ def performScreenGrab(ip):
 
         # Open Shell on Client
         chan = client.invoke_shell()
+        while not chan.recv_ready():
+            time.sleep(1)
         out = chan.recv(9999)
+         ## GET Phone Info
+        m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
+        phoneMAC = m.group(3)
         chan.send('reportWindowData\n')
         while not chan.recv_ready():
             time.sleep(3)
@@ -241,11 +251,11 @@ def performScreenGrab(ip):
         chan.send('bye\n')
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
-        return out
+        return out,phoneMAC
     except:
         print('- Failed connecting to: ' + str(ip))
         fail_hosts.append(ip)
-        return -1
+        return -1,-1
 
 def reboot_phones(Local_IPSet):
     clear()
@@ -272,6 +282,8 @@ def perform_reboot(ip):
         # Open Shell on Client
         #print('-----Invoking shell')
         chan = client.invoke_shell()
+        while not chan.recv_ready():
+            time.sleep(1)
         out = chan.recv(9999)
         ## REBOOT 
         chan.send('reboot\n')
@@ -318,6 +330,8 @@ def perform_log_clear(ip):
         # Open Shell on Client
         #print('-----Invoking shell')
         chan = client.invoke_shell()
+        while not chan.recv_ready():
+            time.sleep(1)
         out = chan.recv(9999)
         ecrCleared = False
         sipCleared = False
@@ -334,10 +348,10 @@ def perform_log_clear(ip):
         while not chan.recv_ready():
             time.sleep(3)
         out = chan.recv(9999)
-        #print(out.decode("ascii"))
         if 'cleared' in out.decode("ascii"):
             print('+ Successfully cleared SIP Log File for ' + str(ip) + '!')
             sipCleared = True
+        # If both logs cleared successfully, count as successful host.
         if ecrCleared and sipCleared:
             success_hosts.append(ip)
         else:
@@ -385,6 +399,8 @@ def perform_factory_reset(ip):
 
         # Open Shell on Client
         chan = client.invoke_shell()
+        while not chan.recv_ready():
+            time.sleep(1)
         out = chan.recv(9999)
         ## GET MAC ADDRESS
         m = re.search('.*MAC Address = (.*)\r\nIP', out.decode("ascii"))
