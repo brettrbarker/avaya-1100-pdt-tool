@@ -34,6 +34,7 @@ from os import system, name, makedirs
 from pathlib import Path
 from collections import defaultdict
 import netaddr
+import logging; logging.basicConfig(); 
 
 
 
@@ -57,6 +58,8 @@ endIP = ''
 customIPs = False
 customPingIPs = False
 
+# Uncomment to turn on debug logging
+#logging.getLogger('paramiko').setLevel(logging.DEBUG) 
 
 menu_options = {
     1: 'Set SSH User/Pass',
