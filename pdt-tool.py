@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.5.2
+## Version: 1.5.3
 ## Updated: 2022-03-15
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -19,7 +19,7 @@
 ## 1.5.1 - Added IP validation to input file IP addresses
 ## 1.5.2 - Added MAC address to reportWindowData file. 
 ##         Added wait timers to all SSH invokes to try to increase reliability.
-##
+## 1.5.3 - Added sleep timer after factory reset
 ##
 ########################################BRB####################################################
 
@@ -420,6 +420,7 @@ def perform_factory_reset(ip):
                 time.sleep(3)
             out = chan.recv(9999)
             if 'Enter MAC-address:' in out.decode("ascii"):
+                #print('sending mac: ' + phonemac)
                 chan.send(str(phonemac) + '\n') # Send MAC address for confirmation
                 # while not chan.recv_ready():
                 #     time.sleep(3)
@@ -428,6 +429,9 @@ def perform_factory_reset(ip):
                 #     fail_hosts.append(ip)
                 # else:
                 print('+ Successfully factory reset: ' + str(ip))
+                print('Sleeping...')
+                time.sleep(3)
+                print('Done Sleeping.')
                 success_hosts.append(ip)
             else:
                 fail_hosts.append(ip)
@@ -435,9 +439,10 @@ def perform_factory_reset(ip):
         else:
             print('Error sending reset2factory command')
             fail_hosts.append(ip)
-
+        print('Closing Channel and SSH Client')
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
+        #print('Closed. Done.')
     except:
         print('- Failed connecting to: ' + str(ip))
         fail_hosts.append(ip)
