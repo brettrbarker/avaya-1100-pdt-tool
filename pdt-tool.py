@@ -421,14 +421,14 @@ def perform_factory_reset(ip):
             out = chan.recv(9999)
             if 'Enter MAC-address:' in out.decode("ascii"):
                 chan.send(str(phonemac) + '\n') # Send MAC address for confirmation
-                while not chan.recv_ready():
-                    time.sleep(3)
-                out = chan.recv(9999)
-                if 'Incorrect MAC-address' in out.decode("ascii"):
-                    fail_hosts.append(ip)
-                else:
-                    print('+ Successfully factory reset: ' + str(ip))
-                    success_hosts.append(ip)
+                # while not chan.recv_ready():
+                #     time.sleep(3)
+                # out = chan.recv(9999)
+                # if 'Incorrect MAC-address' in out.decode("ascii"):
+                #     fail_hosts.append(ip)
+                # else:
+                print('+ Successfully factory reset: ' + str(ip))
+                success_hosts.append(ip)
             else:
                 fail_hosts.append(ip)
                 
