@@ -499,7 +499,7 @@ def perform_factory_reset(ip):
                 # else:
                 print('+ Successfully factory reset: ' + str(ip))
                 print('Sleeping...')
-                time.sleep(3)
+                time.sleep(10)
                 print('Done Sleeping.')
                 success_hosts.append(ip)
             else:
