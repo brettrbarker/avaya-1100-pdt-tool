@@ -8,7 +8,7 @@
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
 ## Version: 1.5.3
-## Updated: 2022-03-15
+## Updated: 2022-03-17
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -20,6 +20,8 @@
 ## 1.5.2 - Added MAC address to reportWindowData file. 
 ##         Added wait timers to all SSH invokes to try to increase reliability.
 ## 1.5.3 - Added sleep timer after factory reset
+## 1.5.4 - Improved error exception handling.
+##         Fixed bug with not closing client on failed attempt.
 ##
 ########################################BRB####################################################
 
@@ -34,7 +36,9 @@ from os import system, name, makedirs
 from pathlib import Path
 from collections import defaultdict
 import netaddr
-import logging; logging.basicConfig(); 
+import logging
+
+import paramiko; logging.basicConfig(); 
 
 
 
@@ -202,8 +206,24 @@ def perform_get_info(ip):
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
         return phoneModel, phoneFirmware, phoneMAC
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
     except:
         print('- Failed connecting to: ' + str(ip))
+        client.close()
         fail_hosts.append(ip)
         return -1
 
@@ -255,8 +275,24 @@ def performScreenGrab(ip):
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
         return out,phoneMAC
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1,-1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1,-1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1,-1
     except:
         print('- Failed connecting to: ' + str(ip))
+        client.close()
         fail_hosts.append(ip)
         return -1,-1
 
@@ -302,9 +338,26 @@ def perform_reboot(ip):
             fail_hosts.append(ip)
             chan.close()  # Close Shell Channel
             client.close() # Close the client itself
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
     except:
         print('- Failed connecting to: ' + str(ip))
+        client.close()
         fail_hosts.append(ip)
+        return -1
     return    
     
 def clear_phone_logs(Local_IPSet):
@@ -365,10 +418,26 @@ def perform_log_clear(ip):
         #out = chan.recv(9999)
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
-        
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
     except:
         print('- Failed connecting to: ' + str(ip))
+        client.close()
         fail_hosts.append(ip)
+        return -1
     return
 
 def factory_reset_phone(Local_IPSet):
@@ -439,13 +508,30 @@ def perform_factory_reset(ip):
         else:
             print('Error sending reset2factory command')
             fail_hosts.append(ip)
-        print('Closing Channel and SSH Client')
+        #print('Closing Channel and SSH Client')
         chan.close()  # Close Shell Channel
         client.close() # Close the client itself
         #print('Closed. Done.')
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1
     except:
         print('- Failed connecting to: ' + str(ip))
+        client.close()
         fail_hosts.append(ip)
+        return -1
     return
 
 def process_results(source):
