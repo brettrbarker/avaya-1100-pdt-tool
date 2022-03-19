@@ -241,7 +241,11 @@ def getPhoneScreen(Local_IPSet):
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
+    genConfig = False
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET PHONE SCREEN INFO FROM ' + str(countIPs) + ' PHONES #####')
+    gen = input('Generate Config Files from Screen grabs? y/N: ')
+    if  gen.upper() == 'Y':
+        genConfig = True
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
@@ -251,15 +255,17 @@ def getPhoneScreen(Local_IPSet):
     f = open(outputpath + '/' + windowData_file, 'w')
         
     for ip in Local_IPSet:
-        window,MAC = performScreenGrab(ip)
+        window,MAC = performScreenGrab(ip, genConfig)
         if not window == -1:
             f.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + MAC + ' #####\n\n')
             f.write(window.decode("ascii") + '\n\n')
+        if genConfig:
+            configFromScreenGrab(window,MAC)
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + windowData_file + '\n*****')
     process_results('get_window')
 
-def performScreenGrab(ip):
+def performScreenGrab(ip, genConfig):
     try:
         # Set up client and connect
         client = SSHClient()
@@ -305,7 +311,14 @@ def performScreenGrab(ip):
         client.close()
         fail_hosts.append(ip)
         return -1,-1
-
+def configFromScreenGrab(screenGrab):
+    for line in screenGrab.decode("ascii"):
+        m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
+        if m:
+            print('Line: ' + m.group(2))
+            print('Phone: ' + m.group(1))
+    
+    
 def reboot_phones(Local_IPSet):
     clear()
     clear_results()
