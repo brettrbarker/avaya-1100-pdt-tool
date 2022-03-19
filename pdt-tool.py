@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.5.3
+## Version: 1.6.1
 ## Updated: 2022-03-18
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -23,6 +23,7 @@
 ## 1.5.4 - Improved error exception handling.
 ##         Fixed bug with not closing client on failed attempt.
 ## 1.6.0 - Ignore all host keys and accept them no matter what.
+## 1.6.1 - Major addition. Option 6 can now generate the phone config files based on phone numbers detected in screen grab.
 ##
 ########################################BRB####################################################
 
@@ -78,7 +79,7 @@ menu_options = {
     3: 'List IP Addresses',
     4: 'Ping All IPs',
     5: 'Get Model, Mac, FW version',
-    6: 'Get Phone Screen Data',
+    6: 'Get Phone Screen and Generate Configs',
     7: 'Reboot Phones',
     8: 'Clear All Phone Logs',
     9: 'Factory Reset Phones',
@@ -341,8 +342,6 @@ def configFromScreenGrab(screenGrab, MAC):
         m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
         if m:
             lineDict[m.group(2)] = m.group(1)
-            print('Line: ' + m.group(2))
-            print('Phone: ' + m.group(1))
     if lineDict:
         if os.path.exists(outputpath + '/' + filename): 
             print('- FAILURE to create phone config. File already exists: ' + outputpath + '/' + filename)
@@ -362,6 +361,7 @@ def configFromScreenGrab(screenGrab, MAC):
             output.write("\n\n".join(file_logins)) # Write the auto login data
             results_file.write('SUCCESS - Writing File ' + filename + '\n')
             output.close() # Close the output file.
+            print('SUCCESS - Writing File ' + filename)
     
     
 def reboot_phones(Local_IPSet):
