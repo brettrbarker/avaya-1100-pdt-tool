@@ -26,7 +26,7 @@
 ########################################BRB####################################################
 
 
-from paramiko import AutoAddPolicy, SSHClient
+from paramiko import SSHClient
 import time
 import csv
 import datetime
@@ -77,6 +77,15 @@ menu_options = {
     9: 'Factory Reset Phones',
     0: 'Exit',
 }
+
+class IgnorePolicy(paramiko.MissingHostKeyPolicy):
+    """
+    Policy for ignoring an unknown host key and
+    accepting it. This is used by `.SSHClient`.
+    """
+
+    def missing_host_key(self, client, hostname, key):
+        pass
 
 def print_menu():
     print('----------------------------------------------------')
@@ -182,8 +191,8 @@ def perform_get_info(ip):
     try:
         # Set up client and connect
         client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        client.load_host_keys('known_phones')
+        client.set_missing_host_key_policy(IgnorePolicy)
+        
         client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
         # Open Shell on Client
@@ -253,8 +262,8 @@ def performScreenGrab(ip):
     try:
         # Set up client and connect
         client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        client.load_host_keys('known_phones')
+        client.set_missing_host_key_policy(IgnorePolicy)
+        
         client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
         # Open Shell on Client
@@ -314,8 +323,8 @@ def perform_reboot(ip):
     try:
         # Set up client and connect
         client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        client.load_host_keys('known_phones')
+        client.set_missing_host_key_policy(IgnorePolicy)
+        
         client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
         # Open Shell on Client
@@ -379,8 +388,8 @@ def perform_log_clear(ip):
     try:
         # Set up client and connect
         client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        client.load_host_keys('known_phones')
+        client.set_missing_host_key_policy(IgnorePolicy)
+        
         client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
         # Open Shell on Client
@@ -465,8 +474,8 @@ def perform_factory_reset(ip):
     try:
         # Set up client and connect
         client = SSHClient()
-        client.set_missing_host_key_policy(AutoAddPolicy)
-        client.load_host_keys('known_phones')
+        client.set_missing_host_key_policy(IgnorePolicy)
+        
         client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
         # Open Shell on Client
@@ -705,7 +714,6 @@ def start_pdt_tool():
                 except:
                     print(str(row['IP']) + ' is Not a Valid IP Address')
                     time.sleep(2)
-    Path('known_phones').touch()
 
     results_setup()
 
