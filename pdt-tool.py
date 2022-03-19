@@ -39,13 +39,19 @@ from collections import defaultdict
 import netaddr
 import logging
 
-import paramiko; logging.basicConfig(); 
+import paramiko; logging.basicConfig();
+import os
 
 
 
 #GLOBAL VARIABLES
 SSH_Username = 'help'   # Default value if not changed in user prompt. Can be modified here.
 SSH_Pass = '1234'       # Default value if not changed in user prompt. Can be modified here.
+
+# Generated Config file defaults
+defaultPassword = '123456'  #  SET THE DEFAULT PASSWORD FOR THE PHONE ACCOUNTS TO LOGIN WITH HERE
+defaultDomain = 'example.org' # SET THE DOMAIN AT THE END OF THE PHONE NUMBER USER ACCOUNT
+
 inputfile = ''
 success_hosts = []
 fail_hosts = []
@@ -240,12 +246,24 @@ def perform_get_info(ip):
 def getPhoneScreen(Local_IPSet):
     clear()
     clear_results()
+    global defaultDomain
+    global defaultPassword
     countIPs = len(Local_IPSet)
     genConfig = False
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET PHONE SCREEN INFO FROM ' + str(countIPs) + ' PHONES #####')
     gen = input('Generate Config Files from Screen grabs? y/N: ')
     if  gen.upper() == 'Y':
         genConfig = True
+        ## PROMPT FOR DOMAIN and Password for Phone Configs
+        new_domain = input('Enter Phone Domain: [' + defaultDomain + ']: ')
+        new_user_pass = input('Enter User Password: [' + str(defaultPassword) + ']: ')
+        if new_domain:
+            defaultDomain = new_domain
+            print('New Domain set: ' + defaultDomain)
+        if new_user_pass:
+            defaultPassword = new_user_pass
+            print('New User Password set: ' + defaultPassword)
+
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
@@ -311,12 +329,39 @@ def performScreenGrab(ip, genConfig):
         client.close()
         fail_hosts.append(ip)
         return -1,-1
-def configFromScreenGrab(screenGrab):
-    for line in screenGrab.decode("ascii"):
+
+def configFromScreenGrab(screenGrab, MAC):
+    filename = "SIP" + MAC.upper() + ".cfg" # Set output filename
+    outputpath = 'phone_configs'
+    lineDict = defaultdict()
+    file_logins = []
+    os.makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+    for line in screenGrab.decode("ascii").splitlines():
         m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
         if m:
+            lineDict[m.group(2)] = m.group(1)
             print('Line: ' + m.group(2))
             print('Phone: ' + m.group(1))
+    if lineDict:
+        if os.path.exists(outputpath + '/' + filename): 
+            print('- FAILURE to create phone config. File already exists: ' + outputpath + '/' + filename)
+            results_file.write('FAIL - File already exists: ' + filename + '\n') 
+        else:
+            maxlogins = 2
+            if len(lineDict) > 2:
+                maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
+            file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
+            for k, v in lineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
+                key = k
+                file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
+                file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+            output = open(outputpath + '/' + filename, 'x') # Open Output file.
+            output.write("\n\n".join(file_contents)) # Write static data in the file.
+            output.write("\n\n")
+            output.write("\n\n".join(file_logins)) # Write the auto login data
+            results_file.write('SUCCESS - Writing File ' + filename + '\n')
+            output.close() # Close the output file.
     
     
 def reboot_phones(Local_IPSet):
