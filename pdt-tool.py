@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.6.1
-## Updated: 2022-03-18
+## Version: 1.6.2
+## Updated: 2022-03-19
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -24,6 +24,10 @@
 ##         Fixed bug with not closing client on failed attempt.
 ## 1.6.0 - Ignore all host keys and accept them no matter what.
 ## 1.6.1 - Major addition. Option 6 can now generate the phone config files based on phone numbers detected in screen grab.
+## 1.6.2 - Fixed dates on output files. 
+##         Options can be run more than once without exiting and won't overwrite as long as not started within the same minute.
+##         Set phone config file to overwrite previous.
+##
 ##
 ########################################BRB####################################################
 
@@ -59,8 +63,8 @@ numSuccess = 0
 numFail = 0
 IPSet = set()
 now = datetime.datetime.now()
-output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
-windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
+#output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+#windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
 results_file_name = 'pdt-tool-' + now.strftime('%Y-%m-%d-%H%M') + '.log'
 outputpath = "pdt-tool-logs"
 results_file = ''
@@ -180,6 +184,8 @@ def getPhoneInfo(Local_IPSet):
 
     
     # Write to CSV
+    now = datetime.datetime.now()
+    output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
     outputpath = "output_files"
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
     f = open(outputpath + '/' + output_csv, 'w')
@@ -249,7 +255,10 @@ def getPhoneScreen(Local_IPSet):
     global defaultDomain
     global defaultPassword
     countIPs = len(Local_IPSet)
+    now = datetime.datetime.now()
+    windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
     genConfig = False
+
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET PHONE SCREEN INFO FROM ' + str(countIPs) + ' PHONES #####')
     gen = input('Generate Config Files from Screen grabs? y/N: ')
     if  gen.upper() == 'Y':
@@ -342,27 +351,23 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         if m:
             lineDict[m.group(2)] = m.group(1)
     if lineDict:
-        if path.exists(outputpath + '/' + filename): 
-            print('- FAILURE to create phone config. File already exists: ' + outputpath + '/' + filename)
-            results_file.write('- FAILURE to create phone config. File already exists: ' + filename + '\n') 
-        else:
-            maxlogins = 2
-            if len(lineDict) > 2:
-                maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
-            file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
-            orderedLineDict = OrderedDict(sorted(lineDict.items()))
-            key = 1
-            for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
-                file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
-                file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
-                key += 1
-            output = open(outputpath + '/' + filename, 'x') # Open Output file.
-            output.write("\n\n".join(file_contents)) # Write static data in the file.
-            output.write("\n\n")
-            output.write("\n\n".join(file_logins)) # Write the auto login data
-            results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
-            output.close() # Close the output file.
-            print('+ SUCCESS - Writing File ' + filename)
+        maxlogins = 2
+        if len(lineDict) > 2:
+            maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
+        file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
+        orderedLineDict = OrderedDict(sorted(lineDict.items()))
+        key = 1
+        for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
+            file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
+            file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+            key += 1
+        output = open(outputpath + '/' + filename, 'w') # Open Output file.
+        output.write("\n\n".join(file_contents)) # Write static data in the file.
+        output.write("\n\n")
+        output.write("\n\n".join(file_logins)) # Write the auto login data
+        results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
+        output.close() # Close the output file.
+        print('+ SUCCESS - Writing File ' + filename)
     else:
         print('- Skipping: No line keys detected for: ' + str(ip))
         results_file.write('-Skipping: No line keys detected for' + str(ip) + '\n')
@@ -687,6 +692,7 @@ def pingIPs(Local_IPSet):
         cancel()
         return
     outputpath = "output_files"
+    now = datetime.datetime.now()
     pingresultsfile = 'ping-results-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
     f = open(outputpath + '/' + pingresultsfile, 'w')
