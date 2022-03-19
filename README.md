@@ -36,7 +36,7 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Get Phone Screen Data
+6 -- Get Phone Screen and Generate Configs
 7 -- Reboot Phones
 8 -- Clear All Phone Logs
 9 -- Factory Reset Phones
@@ -62,7 +62,7 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Get Phone Screen Data
+6 -- Get Phone Screen and Generate Configs
 7 -- Reboot Phones
 8 -- Clear All Phone Logs
 9 -- Factory Reset Phones
@@ -87,7 +87,7 @@ Please Choose from the following options:
 3 -- List IP Addresses
 4 -- Ping All IPs
 5 -- Get Model, Mac, FW version
-6 -- Get Phone Screen Data
+6 -- Get Phone Screen and Generate Configs
 7 -- Reboot Phones
 8 -- Clear All Phone Logs
 9 -- Factory Reset Phones
