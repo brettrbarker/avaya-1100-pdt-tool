@@ -34,14 +34,13 @@ import csv
 import datetime
 import re
 import datetime
-from os import system, name, makedirs
+from os import system, name, makedirs, path
 from pathlib import Path
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import netaddr
 import logging
-
 import paramiko; logging.basicConfig();
-import os
+
 
 
 
@@ -274,17 +273,17 @@ def getPhoneScreen(Local_IPSet):
     f = open(outputpath + '/' + windowData_file, 'w')
         
     for ip in Local_IPSet:
-        window,MAC = performScreenGrab(ip, genConfig)
+        window,MAC = performScreenGrab(ip)
         if not window == -1:
             f.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + MAC + ' #####\n\n')
             f.write(window.decode("ascii") + '\n\n')
-        if genConfig:
-            configFromScreenGrab(window,MAC)
+        if genConfig and not window == -1:
+            configFromScreenGrab(window, MAC, ip)
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + windowData_file + '\n*****')
     process_results('get_window')
 
-def performScreenGrab(ip, genConfig):
+def performScreenGrab(ip):
     try:
         # Set up client and connect
         client = SSHClient()
@@ -331,37 +330,42 @@ def performScreenGrab(ip, genConfig):
         fail_hosts.append(ip)
         return -1,-1
 
-def configFromScreenGrab(screenGrab, MAC):
+def configFromScreenGrab(screenGrab, MAC, ip):
     filename = "SIP" + MAC.upper() + ".cfg" # Set output filename
     outputpath = 'phone_configs'
     lineDict = defaultdict()
     file_logins = []
-    os.makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
 
     for line in screenGrab.decode("ascii").splitlines():
         m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
         if m:
             lineDict[m.group(2)] = m.group(1)
     if lineDict:
-        if os.path.exists(outputpath + '/' + filename): 
+        if path.exists(outputpath + '/' + filename): 
             print('- FAILURE to create phone config. File already exists: ' + outputpath + '/' + filename)
-            results_file.write('FAIL - File already exists: ' + filename + '\n') 
+            results_file.write('- FAILURE to create phone config. File already exists: ' + filename + '\n') 
         else:
             maxlogins = 2
             if len(lineDict) > 2:
                 maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
             file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
-            for k, v in lineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
-                key = k
+            orderedLineDict = OrderedDict(sorted(lineDict.items()))
+            key = 1
+            for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
                 file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
                 file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+                key += 1
             output = open(outputpath + '/' + filename, 'x') # Open Output file.
             output.write("\n\n".join(file_contents)) # Write static data in the file.
             output.write("\n\n")
             output.write("\n\n".join(file_logins)) # Write the auto login data
-            results_file.write('SUCCESS - Writing File ' + filename + '\n')
+            results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
             output.close() # Close the output file.
-            print('SUCCESS - Writing File ' + filename)
+            print('+ SUCCESS - Writing File ' + filename)
+    else:
+        print('- Skipping: No line keys detected for: ' + str(ip))
+        results_file.write('-Skipping: No line keys detected for' + str(ip) + '\n')
     
     
 def reboot_phones(Local_IPSet):
@@ -718,8 +722,6 @@ def clear():
     # for windows
     if name == 'nt':
         _ = system('cls')
- 
-     # for mac and linux(here, os.name is 'posix')
     else:
         _ = system('clear')
 
