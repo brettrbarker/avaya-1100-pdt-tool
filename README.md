@@ -6,9 +6,8 @@ To install the dependencies on an online system:
 pip install -r requirements
 ```
 To install the dependencies on an offline system:
-```
-pip install -f dependencies/*
-```
+
+     [Revised Instructions Coming Soon.]
 
 ## Usage
 With input file of IP addresses:
