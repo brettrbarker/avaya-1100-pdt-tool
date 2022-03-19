@@ -8,7 +8,7 @@
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
 ## Version: 1.5.3
-## Updated: 2022-03-17
+## Updated: 2022-03-18
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -22,6 +22,7 @@
 ## 1.5.3 - Added sleep timer after factory reset
 ## 1.5.4 - Improved error exception handling.
 ##         Fixed bug with not closing client on failed attempt.
+## 1.6.0 - Ignore all host keys and accept them no matter what.
 ##
 ########################################BRB####################################################
 
