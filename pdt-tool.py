@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.5.3
+## Version: 1.6.1
 ## Updated: 2022-03-18
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -23,6 +23,7 @@
 ## 1.5.4 - Improved error exception handling.
 ##         Fixed bug with not closing client on failed attempt.
 ## 1.6.0 - Ignore all host keys and accept them no matter what.
+## 1.6.1 - Major addition. Option 6 can now generate the phone config files based on phone numbers detected in screen grab.
 ##
 ########################################BRB####################################################
 
@@ -33,19 +34,24 @@ import csv
 import datetime
 import re
 import datetime
-from os import system, name, makedirs
+from os import system, name, makedirs, path
 from pathlib import Path
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import netaddr
 import logging
+import paramiko; logging.basicConfig();
 
-import paramiko; logging.basicConfig(); 
 
 
 
 #GLOBAL VARIABLES
 SSH_Username = 'help'   # Default value if not changed in user prompt. Can be modified here.
 SSH_Pass = '1234'       # Default value if not changed in user prompt. Can be modified here.
+
+# Generated Config file defaults
+defaultPassword = '123456'  #  SET THE DEFAULT PASSWORD FOR THE PHONE ACCOUNTS TO LOGIN WITH HERE
+defaultDomain = 'example.org' # SET THE DOMAIN AT THE END OF THE PHONE NUMBER USER ACCOUNT
+
 inputfile = ''
 success_hosts = []
 fail_hosts = []
@@ -72,7 +78,7 @@ menu_options = {
     3: 'List IP Addresses',
     4: 'Ping All IPs',
     5: 'Get Model, Mac, FW version',
-    6: 'Get Phone Screen Data',
+    6: 'Get Phone Screen and Generate Configs',
     7: 'Reboot Phones',
     8: 'Clear All Phone Logs',
     9: 'Factory Reset Phones',
@@ -240,8 +246,24 @@ def perform_get_info(ip):
 def getPhoneScreen(Local_IPSet):
     clear()
     clear_results()
+    global defaultDomain
+    global defaultPassword
     countIPs = len(Local_IPSet)
+    genConfig = False
     print('##### INFO: YOU ARE ABOUT TO ATTEMPT TO GET PHONE SCREEN INFO FROM ' + str(countIPs) + ' PHONES #####')
+    gen = input('Generate Config Files from Screen grabs? y/N: ')
+    if  gen.upper() == 'Y':
+        genConfig = True
+        ## PROMPT FOR DOMAIN and Password for Phone Configs
+        new_domain = input('Enter Phone Domain: [' + defaultDomain + ']: ')
+        new_user_pass = input('Enter User Password: [' + str(defaultPassword) + ']: ')
+        if new_domain:
+            defaultDomain = new_domain
+            print('New Domain set: ' + defaultDomain)
+        if new_user_pass:
+            defaultPassword = new_user_pass
+            print('New User Password set: ' + defaultPassword)
+
     proceed = input('PROCEED? y/N: ')
     if not proceed.upper() == 'Y':
         cancel()
@@ -255,6 +277,8 @@ def getPhoneScreen(Local_IPSet):
         if not window == -1:
             f.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + MAC + ' #####\n\n')
             f.write(window.decode("ascii") + '\n\n')
+        if genConfig and not window == -1:
+            configFromScreenGrab(window, MAC, ip)
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + windowData_file + '\n*****')
     process_results('get_window')
@@ -306,6 +330,44 @@ def performScreenGrab(ip):
         fail_hosts.append(ip)
         return -1,-1
 
+def configFromScreenGrab(screenGrab, MAC, ip):
+    filename = "SIP" + MAC.upper() + ".cfg" # Set output filename
+    outputpath = 'phone_configs'
+    lineDict = defaultdict()
+    file_logins = []
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+    for line in screenGrab.decode("ascii").splitlines():
+        m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
+        if m:
+            lineDict[m.group(2)] = m.group(1)
+    if lineDict:
+        if path.exists(outputpath + '/' + filename): 
+            print('- FAILURE to create phone config. File already exists: ' + outputpath + '/' + filename)
+            results_file.write('- FAILURE to create phone config. File already exists: ' + filename + '\n') 
+        else:
+            maxlogins = 2
+            if len(lineDict) > 2:
+                maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
+            file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
+            orderedLineDict = OrderedDict(sorted(lineDict.items()))
+            key = 1
+            for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
+                file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
+                file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+                key += 1
+            output = open(outputpath + '/' + filename, 'x') # Open Output file.
+            output.write("\n\n".join(file_contents)) # Write static data in the file.
+            output.write("\n\n")
+            output.write("\n\n".join(file_logins)) # Write the auto login data
+            results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
+            output.close() # Close the output file.
+            print('+ SUCCESS - Writing File ' + filename)
+    else:
+        print('- Skipping: No line keys detected for: ' + str(ip))
+        results_file.write('-Skipping: No line keys detected for' + str(ip) + '\n')
+    
+    
 def reboot_phones(Local_IPSet):
     clear()
     clear_results()
@@ -660,8 +722,6 @@ def clear():
     # for windows
     if name == 'nt':
         _ = system('cls')
- 
-     # for mac and linux(here, os.name is 'posix')
     else:
         _ = system('clear')
 
