@@ -5,6 +5,7 @@ output_files/
 pdt-tool-logs/
 known_phones*
 phone_configs/
+examples/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
