@@ -347,7 +347,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
 
     for line in screenGrab.decode("ascii").splitlines():
-        m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
+        m = re.search("----\[([0-9][0-9][0-9][0-9]*)\] *, <LineKey#([1-8])", line)
         if m:
             lineDict[m.group(2)] = m.group(1)
     if lineDict:
