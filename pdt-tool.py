@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.6.2
-## Updated: 2022-03-19
+## Version: 1.6.3
+## Updated: 2022-03-20
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -27,6 +27,7 @@
 ## 1.6.2 - Fixed dates on output files. 
 ##         Options can be run more than once without exiting and won't overwrite as long as not started within the same minute.
 ##         Set phone config file to overwrite previous.
+## 1.6.3 - Made the detected line key a minimum of 3 digits.    
 ##
 ##
 ########################################BRB####################################################
