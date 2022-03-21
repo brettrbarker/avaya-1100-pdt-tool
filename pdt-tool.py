@@ -7,7 +7,7 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.6.3
+## Version: 1.6.4
 ## Updated: 2022-03-20
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -29,6 +29,7 @@
 ##         Set phone config file to overwrite previous.
 ## 1.6.3 - Made the detected line key a minimum of 3 digits.    
 ## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
+##
 ##
 ########################################BRB####################################################
 
