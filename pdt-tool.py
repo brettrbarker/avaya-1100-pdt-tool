@@ -28,7 +28,7 @@
 ##         Options can be run more than once without exiting and won't overwrite as long as not started within the same minute.
 ##         Set phone config file to overwrite previous.
 ## 1.6.3 - Made the detected line key a minimum of 3 digits.    
-##
+## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
 ##
 ########################################BRB####################################################
 
@@ -345,6 +345,10 @@ def configFromScreenGrab(screenGrab, MAC, ip):
     outputpath = 'phone_configs'
     lineDict = defaultdict()
     file_logins = []
+    maxlogins = 2
+    file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 3600', 'AUTO_UPDATE_TIME_RANGE 3','AUTOLOGIN_ENABLE 2']
+
+
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
 
     for line in screenGrab.decode("ascii").splitlines():
@@ -352,10 +356,9 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         if m:
             lineDict[m.group(2)] = m.group(1)
     if lineDict:
-        maxlogins = 2
         if len(lineDict) > 2:
             maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
-        file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
         orderedLineDict = OrderedDict(sorted(lineDict.items()))
         key = 1
         for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
@@ -370,10 +373,23 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         output.close() # Close the output file.
         print('+ SUCCESS - Writing File ' + filename)
     else:
-        print('- Skipping: No line keys detected for: ' + str(ip))
-        results_file.write('-Skipping: No line keys detected for' + str(ip) + '\n')
+        outputpath = 'phone_configs_nokeys'
+        makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+        print('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath)
+        results_file.write('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath + '\n')
+        key = 1
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
+        file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' ' + '0000000000@' + defaultDomain]
+        file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+        output = open(outputpath + '/' + filename, 'w') # Open Output file.
+        output.write("\n\n".join(file_contents)) # Write static data in the file.
+        output.write("\n\n")
+        output.write("\n\n".join(file_logins)) # Write the auto login data
+        results_file.write('+ SUCCESS - Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
+        output.close() # Close the output file.
     
-    
+
 def reboot_phones(Local_IPSet):
     clear()
     clear_results()
