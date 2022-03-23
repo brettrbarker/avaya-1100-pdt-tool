@@ -44,7 +44,7 @@ from collections import defaultdict, OrderedDict
 import netaddr
 import logging
 import paramiko; logging.basicConfig();
-
+from multiprocessing import Process
 
 
 
@@ -683,6 +683,8 @@ def printIPs(Local_IPSet):
 def pingIPs(Local_IPSet):
     global IPSet
     global customPingIPs
+    global fail_hosts
+    global success_hosts
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
@@ -698,21 +700,34 @@ def pingIPs(Local_IPSet):
     f = open(outputpath + '/' + pingresultsfile, 'w')
     csvwriter = csv.writer(f)
     csvwriter.writerow(['IP', 'Ping'])
-    
-    for ip in Local_IPSet:
-        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
-        status = True
-        if not response == 0:
-            print('- Ping Failed to: ' + str(ip))
-            status = False
-            fail_hosts.append(ip)
 
-        data = [str(ip),str(status)]
-        if status == True:
-            numSuccess =+ 1
-            print('+ Successfully pinged: ' + str(ip))
-            success_hosts.append(ip)
-        csvwriter.writerow(data)
+    procs = []
+   
+    # instantiating process with arguments
+    for ip in Local_IPSet:
+        # print(name)
+        proc = Process(target=perform_ping, args=(ip,csvwriter,))
+        procs.append(proc)
+        proc.start()
+
+    # complete the processes
+    for proc in procs:
+        proc.join()
+
+    # for ip in Local_IPSet:
+    #     perform_ping(ip,csvwriter)
+        # response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        # status = True
+        # if not response == 0:
+        #     print('- Ping Failed to: ' + str(ip))
+        #     status = False
+        #     fail_hosts.append(ip)
+
+        # data = [str(ip),str(status)]
+        # if status == True:
+        #     print('+ Successfully pinged: ' + str(ip))
+        #     success_hosts.append(ip)
+        # csvwriter.writerow(data)
 
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
@@ -723,6 +738,22 @@ def pingIPs(Local_IPSet):
     if proceed.upper() == 'Y':
         IPSet = success_hosts
         customPingIPs = True
+
+def perform_ping(ip,csvwriter):
+        global fail_hosts
+        global success_hosts
+        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        status = True
+        if not response == 0:
+            print('- Ping Failed to: ' + str(ip))
+            status = False
+            fail_hosts.append(ip)
+
+        data = [str(ip),str(status)]
+        if status == True:
+            print('+ Successfully pinged: ' + str(ip))
+            success_hosts.append(ip)
+        csvwriter.writerow(data)
 
 def clear():
     # for windows
