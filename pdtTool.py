@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.6.2
-## Updated: 2022-03-19
+## Version: 1.6.4
+## Updated: 2022-03-20
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -27,6 +27,8 @@
 ## 1.6.2 - Fixed dates on output files. 
 ##         Options can be run more than once without exiting and won't overwrite as long as not started within the same minute.
 ##         Set phone config file to overwrite previous.
+## 1.6.3 - Made the detected line key a minimum of 3 digits.    
+## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
 ##
 ##
 ########################################BRB####################################################
@@ -44,7 +46,7 @@ from collections import defaultdict, OrderedDict
 import netaddr
 import logging
 import paramiko; logging.basicConfig();
-from multiprocessing import Process
+
 
 
 
@@ -97,6 +99,41 @@ class IgnorePolicy(paramiko.MissingHostKeyPolicy):
 
     def missing_host_key(self, client, hostname, key):
         pass
+
+def SSHsetup(ip):
+    try:
+        # Set up client and connect
+        client = SSHClient()
+        client.set_missing_host_key_policy(IgnorePolicy)
+        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
+
+        # Open Shell on Client
+        chan = client.invoke_shell()
+        return chan, client
+    except paramiko.AuthenticationException:
+        print('- Bad SSH Credentials: ' + str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1, -1
+    except paramiko.BadHostKeyException:
+        print('- Bad Host Key: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1, -1
+    except paramiko.SSHException:
+        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+        fail_hosts.append(ip)
+        client.close()
+        return -1, -1
+    except:
+        print('- Failed connecting to: ' + str(ip))
+        client.close()
+        fail_hosts.append(ip)
+        return -1, -1
+
+def SSHClose(chan, client):
+        chan.close()  # Close Shell Channel
+        client.close() # Close the client itself
 
 def print_menu():
     print('----------------------------------------------------')
@@ -200,16 +237,15 @@ def getPhoneInfo(Local_IPSet):
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
     process_results('get_info')
 
-def perform_get_info(ip):
-    try:
-        # Set up client and connect
-        client = SSHClient()
-        client.set_missing_host_key_policy(IgnorePolicy)
-        
-        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
 
-        # Open Shell on Client
-        chan = client.invoke_shell()
+
+def perform_get_info(ip):
+        chan, client = SSHsetup(ip)
+        print(str(chan))
+        if chan == -1:
+            print('exiting due to -1')
+            return -1
+        print('continuing')
         while not chan.recv_ready():
             time.sleep(1)
         out = chan.recv(9999)
@@ -224,30 +260,11 @@ def perform_get_info(ip):
         #    time.sleep(3)
         #out = chan.recv(9999)
         print('+ Successfully got info for ' + str(ip) + '!')
+        SSHClose(chan, client)
         success_hosts.append(ip)
-        chan.close()  # Close Shell Channel
-        client.close() # Close the client itself
+ 
         return phoneModel, phoneFirmware, phoneMAC
-    except paramiko.AuthenticationException:
-        print('- Bad SSH Credentials: ' + str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.BadHostKeyException:
-        print('- Bad Host Key: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.SSHException:
-        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except:
-        print('- Failed connecting to: ' + str(ip))
-        client.close()
-        fail_hosts.append(ip)
-        return -1
+
 
 def getPhoneScreen(Local_IPSet):
     clear()
@@ -293,15 +310,9 @@ def getPhoneScreen(Local_IPSet):
     process_results('get_window')
 
 def performScreenGrab(ip):
-    try:
-        # Set up client and connect
-        client = SSHClient()
-        client.set_missing_host_key_policy(IgnorePolicy)
-        
-        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
-
-        # Open Shell on Client
-        chan = client.invoke_shell()
+        chan, client = SSHsetup(ip)
+        if chan == -1:
+            return -1, -1
         while not chan.recv_ready():
             time.sleep(1)
         out = chan.recv(9999)
@@ -315,46 +326,34 @@ def performScreenGrab(ip):
         print('+ Successfully grabbed screen info for ' + str(ip) + '!')
         success_hosts.append(ip)
         chan.send('bye\n')
-        chan.close()  # Close Shell Channel
-        client.close() # Close the client itself
+        SSHClose(chan, client)
         return out,phoneMAC
-    except paramiko.AuthenticationException:
-        print('- Bad SSH Credentials: ' + str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1,-1
-    except paramiko.BadHostKeyException:
-        print('- Bad Host Key: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1,-1
-    except paramiko.SSHException:
-        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1,-1
-    except:
-        print('- Failed connecting to: ' + str(ip))
-        client.close()
-        fail_hosts.append(ip)
-        return -1,-1
 
 def configFromScreenGrab(screenGrab, MAC, ip):
     filename = "SIP" + MAC.upper() + ".cfg" # Set output filename
     outputpath = 'phone_configs'
     lineDict = defaultdict()
     file_logins = []
+    maxlogins = 2
+    file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 3600', 'AUTO_UPDATE_TIME_RANGE 3','AUTOLOGIN_ENABLE 2']
+
+
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
 
     for line in screenGrab.decode("ascii").splitlines():
-        m = re.search("----\[([0-9]*)\] *, <LineKey#([1-8])", line)
+        m = re.search("----\[([0-9][0-9][0-9][0-9]*)\] *, <LineKey#([1-8])", line)
         if m:
             lineDict[m.group(2)] = m.group(1)
+        banner = re.search("----\[Login Banner\] *, <Context>", line)
+        if banner: # if Loginbanner is seen, press Ok and call config again
+            print('- Login Banner Detected: Accepting Login Banneer on ' + str(ip))
+            screen2, mac2 = sendKey(ip, '115')
+            configFromScreenGrab(screen2, mac2, ip)
+            return
     if lineDict:
-        maxlogins = 2
         if len(lineDict) > 2:
             maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
-        file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 2200', 'AUTO_UPDATE_TIME_RANGE 3','MAX_LOGINS '+ str(maxlogins),'AUTOLOGIN_ENABLE 2']
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
         orderedLineDict = OrderedDict(sorted(lineDict.items()))
         key = 1
         for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
@@ -369,10 +368,46 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         output.close() # Close the output file.
         print('+ SUCCESS - Writing File ' + filename)
     else:
-        print('- Skipping: No line keys detected for: ' + str(ip))
-        results_file.write('-Skipping: No line keys detected for' + str(ip) + '\n')
-    
-    
+        outputpath = 'phone_configs_nokeys'
+        makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+        print('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath)
+        results_file.write('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath + '\n')
+        key = 1
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
+        file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' ' + '0000000000@' + defaultDomain]
+        file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+        output = open(outputpath + '/' + filename, 'w') # Open Output file.
+        output.write("\n\n".join(file_contents)) # Write static data in the file.
+        output.write("\n\n")
+        output.write("\n\n".join(file_logins)) # Write the auto login data
+        results_file.write('+ SUCCESS - Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
+        output.close() # Close the output file.
+
+def sendKey(ip, key):
+        chan, client = SSHsetup(ip)
+        if chan == -1:
+            return -1, -1
+        while not chan.recv_ready():
+            time.sleep(1)
+        out = chan.recv(9999)
+         ## GET Phone Info
+        m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
+        phoneMAC = m.group(3)
+        chan.send('sendKey '+ str(key) + ' 2\n')#send the key
+        print('Pressing key on phone')
+        while not chan.recv_ready():
+            time.sleep(3)
+        out = chan.recv(9999)
+        chan.send('reportWindowData\n')
+        while not chan.recv_ready():
+            time.sleep(3)
+        out = chan.recv(9999)
+        print('+ Successfully grabbed screen info for ' + str(ip) + '!')
+        chan.send('bye\n')
+        SSHClose(chan, client)
+        return out, phoneMAC
+
 def reboot_phones(Local_IPSet):
     clear()
     clear_results()
@@ -388,54 +423,25 @@ def reboot_phones(Local_IPSet):
     process_results('reboot_phones')
 
 def perform_reboot(ip):
-    try:
-        # Set up client and connect
-        client = SSHClient()
-        client.set_missing_host_key_policy(IgnorePolicy)
-        
-        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
-
-        # Open Shell on Client
-        #print('-----Invoking shell')
-        chan = client.invoke_shell()
-        while not chan.recv_ready():
-            time.sleep(1)
-        out = chan.recv(9999)
-        ## REBOOT 
-        chan.send('reboot\n')
-        while not chan.recv_ready():
-            time.sleep(3)
-        out = chan.recv(9999)
-        if 'Rebooting!' in out.decode("ascii"):
-            print('+ Successfully rebooted ' + str(ip) + '!')
-            success_hosts.append(ip)
-            chan.close()  # Close Shell Channel
-            client.close() # Close the client itself
-        else:
-            fail_hosts.append(ip)
-            chan.close()  # Close Shell Channel
-            client.close() # Close the client itself
-    except paramiko.AuthenticationException:
-        print('- Bad SSH Credentials: ' + str(ip))
-        fail_hosts.append(ip)
-        client.close()
+    chan, client = SSHsetup(ip)
+    if chan == -1:
         return -1
-    except paramiko.BadHostKeyException:
-        print('- Bad Host Key: ' +str(ip))
+    while not chan.recv_ready():
+        time.sleep(1)
+    out = chan.recv(9999)
+    ## REBOOT 
+    chan.send('reboot\n')
+    while not chan.recv_ready():
+        time.sleep(3)
+    out = chan.recv(9999)
+    if 'Rebooting!' in out.decode("ascii"):
+        print('+ Successfully rebooted ' + str(ip) + '!')
+        success_hosts.append(ip)
+        SSHClose(chan, client)
+    else:
         fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.SSHException:
-        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except:
-        print('- Failed connecting to: ' + str(ip))
-        client.close()
-        fail_hosts.append(ip)
-        return -1
-    return    
+        SSHClose(chan, client)
+    return
     
 def clear_phone_logs(Local_IPSet):
     clear()
@@ -453,16 +459,9 @@ def clear_phone_logs(Local_IPSet):
 
 
 def perform_log_clear(ip):
-    try:
-        # Set up client and connect
-        client = SSHClient()
-        client.set_missing_host_key_policy(IgnorePolicy)
-        
-        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
-
-        # Open Shell on Client
-        #print('-----Invoking shell')
-        chan = client.invoke_shell()
+        chan, client = SSHsetup(ip)
+        if chan == -1:
+            return -1
         while not chan.recv_ready():
             time.sleep(1)
         out = chan.recv(9999)
@@ -493,29 +492,8 @@ def perform_log_clear(ip):
         #while not chan.recv_ready():  # Shouldn't need to listen for data after the bye
         #    time.sleep(3)
         #out = chan.recv(9999)
-        chan.close()  # Close Shell Channel
-        client.close() # Close the client itself
-    except paramiko.AuthenticationException:
-        print('- Bad SSH Credentials: ' + str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.BadHostKeyException:
-        print('- Bad Host Key: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.SSHException:
-        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except:
-        print('- Failed connecting to: ' + str(ip))
-        client.close()
-        fail_hosts.append(ip)
-        return -1
-    return
+        SSHClose(chan, client)
+        return
 
 def factory_reset_phone(Local_IPSet):
     clear()
@@ -539,15 +517,9 @@ def factory_reset_phone(Local_IPSet):
     process_results('factory_reset')
 
 def perform_factory_reset(ip):
-    try:
-        # Set up client and connect
-        client = SSHClient()
-        client.set_missing_host_key_policy(IgnorePolicy)
-        
-        client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
-
-        # Open Shell on Client
-        chan = client.invoke_shell()
+        chan, client = SSHsetup(ip)
+        if chan == -1:
+            return -1
         while not chan.recv_ready():
             time.sleep(1)
         out = chan.recv(9999)
@@ -586,30 +558,9 @@ def perform_factory_reset(ip):
             print('Error sending reset2factory command')
             fail_hosts.append(ip)
         #print('Closing Channel and SSH Client')
-        chan.close()  # Close Shell Channel
-        client.close() # Close the client itself
+        SSHClose(chan, client)
         #print('Closed. Done.')
-    except paramiko.AuthenticationException:
-        print('- Bad SSH Credentials: ' + str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.BadHostKeyException:
-        print('- Bad Host Key: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except paramiko.SSHException:
-        print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
-        fail_hosts.append(ip)
-        client.close()
-        return -1
-    except:
-        print('- Failed connecting to: ' + str(ip))
-        client.close()
-        fail_hosts.append(ip)
-        return -1
-    return
+        return
 
 def process_results(source):
     if source == 'reboot_phones':
@@ -683,8 +634,6 @@ def printIPs(Local_IPSet):
 def pingIPs(Local_IPSet):
     global IPSet
     global customPingIPs
-    global fail_hosts
-    global success_hosts
     clear()
     clear_results()
     countIPs = len(Local_IPSet)
@@ -700,34 +649,21 @@ def pingIPs(Local_IPSet):
     f = open(outputpath + '/' + pingresultsfile, 'w')
     csvwriter = csv.writer(f)
     csvwriter.writerow(['IP', 'Ping'])
-
-    procs = []
-   
-    # instantiating process with arguments
+    
     for ip in Local_IPSet:
-        # print(name)
-        proc = Process(target=perform_ping, args=(ip,csvwriter,))
-        procs.append(proc)
-        proc.start()
+        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        status = True
+        if not response == 0:
+            print('- Ping Failed to: ' + str(ip))
+            status = False
+            fail_hosts.append(ip)
 
-    # complete the processes
-    for proc in procs:
-        proc.join()
-
-    # for ip in Local_IPSet:
-    #     perform_ping(ip,csvwriter)
-        # response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
-        # status = True
-        # if not response == 0:
-        #     print('- Ping Failed to: ' + str(ip))
-        #     status = False
-        #     fail_hosts.append(ip)
-
-        # data = [str(ip),str(status)]
-        # if status == True:
-        #     print('+ Successfully pinged: ' + str(ip))
-        #     success_hosts.append(ip)
-        # csvwriter.writerow(data)
+        data = [str(ip),str(status)]
+        if status == True:
+            numSuccess =+ 1
+            print('+ Successfully pinged: ' + str(ip))
+            success_hosts.append(ip)
+        csvwriter.writerow(data)
 
     f.close()
     print('\n*****\nOutput File Saved To: ' + outputpath + '/' + pingresultsfile + '\n*****')
@@ -738,22 +674,6 @@ def pingIPs(Local_IPSet):
     if proceed.upper() == 'Y':
         IPSet = success_hosts
         customPingIPs = True
-
-def perform_ping(ip,csvwriter):
-        global fail_hosts
-        global success_hosts
-        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
-        status = True
-        if not response == 0:
-            print('- Ping Failed to: ' + str(ip))
-            status = False
-            fail_hosts.append(ip)
-
-        data = [str(ip),str(status)]
-        if status == True:
-            print('+ Successfully pinged: ' + str(ip))
-            success_hosts.append(ip)
-        csvwriter.writerow(data)
 
 def clear():
     # for windows
