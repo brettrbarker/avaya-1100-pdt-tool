@@ -43,15 +43,15 @@ customIPs = False
 customPingIPs = False
 
 #Multi-select menu actions
-performActionsDict = {
-    'do_acknowledge_banner': False,
-    'do_generate_csv': False,
-    'do_get_screen': False,
-    'do_generate_confg': False,
-    'do_clear_logs': False,
-    'do_reboot': False,
-    'do_reboot_ifstuck': False
-}
+# performActionsDict = {
+#     'do_acknowledge_banner': False,
+#     'do_generate_csv': False,
+#     'do_get_screen': False,
+#     'do_generate_confg': False,
+#     'do_clear_logs': False,
+#     'do_reboot': False,
+#     'do_reboot_ifstuck': False
+# }
 
 # Uncomment to turn on debug logging
 #logging.getLogger('paramiko').setLevel(logging.DEBUG) 
@@ -144,9 +144,213 @@ def set_ip_range():
     print (startIP + ' to ' + endIP)
     time.sleep(2)
 
-def mainActions(Local_IPSet):
-    pass
+def mainActions(Local_IPSet, performActionsDict):
 
+# Generic setup data
+    clear()
+    clear_results()
+    countIPs = len(Local_IPSet)
+    now = datetime.datetime.now()
+    phoneInfoList = defaultdict(list)
+    global defaultDomain
+    global defaultPassword
+    windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
+    genConfig = False
+
+# Prep Info for Auto Login Configs
+    if performActionsDict['do_generate_confg']:
+        genConfig = True
+        ## PROMPT FOR DOMAIN and Password for Phone Configs
+        print('The Following Information is used for the Phone AutoLogin Config Files.')
+        new_domain = input('Enter Phone Domain: [' + defaultDomain + ']: ')
+        new_user_pass = input('Enter User Password: [' + str(defaultPassword) + ']: ')
+        if new_domain:
+            defaultDomain = new_domain
+            print('New Domain set: ' + defaultDomain)
+        if new_user_pass:
+            defaultPassword = new_user_pass
+            print('New User Password set: ' + defaultPassword)
+
+        proceed = input('PROCEED? y/N: ')
+        if not proceed.upper() == 'Y':
+            cancel()
+            return
+
+    if performActionsDict['do_get_screen']:
+        outputpath = "output_files"
+        makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+        f_grab = open(outputpath + '/' + windowData_file, 'w')
+
+
+ 
+    # Loop through ALL IP's and perform actions:
+    for ip in Local_IPSet:
+# MAIN TRY 
+        try:
+            window = False # set window to false for each IP before possible screen grab
+            # Set up client and connect
+            client = SSHClient()
+            client.set_missing_host_key_policy(IgnorePolicy)
+            client.connect(ip, username=SSH_Username, password=SSH_Pass, look_for_keys=False, allow_agent=False, banner_timeout=3, timeout=3)
+
+            # Open Shell on Client
+            chan = client.invoke_shell()
+            while not chan.recv_ready():
+                time.sleep(1)
+            out = chan.recv(9999)
+            ## GET Phone Info
+            m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
+            phoneModel = m.group(1)
+            phoneFirmware = m.group(2)
+            phoneMAC = m.group(3)
+            phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
+
+            # Screen Grab Command for Window data file or auto login configs
+            if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg']:
+                chan.send('reportWindowData\n')
+                while not chan.recv_ready():
+                    time.sleep(3)
+                window = chan.recv(9999)
+                if performActionsDict['do_get_screen']:
+                    print('+ Successfully grabbed screen info for ' + str(ip) + '!')
+ 
+            ## Clear Logs
+            if performActionsDict['do_clear_logs']:
+                ecrCleared = False
+                sipCleared = False
+                ## CLEAR LOG 0
+                chan.send('clearlog 0\n')
+                while not chan.recv_ready():
+                    time.sleep(3)
+                out = chan.recv(9999)
+                if 'cleared' in out.decode("ascii"):
+                    print('+ Successfully cleared ECR Log File for ' + str(ip) + '!')
+                    ecrCleared = True
+                ## CLEAR LOG 1
+                chan.send('clearlog 1\n')
+                while not chan.recv_ready():
+                    time.sleep(3)
+                out = chan.recv(9999)
+                if 'cleared' in out.decode("ascii"):
+                    print('+ Successfully cleared SIP Log File for ' + str(ip) + '!')
+                    sipCleared = True
+
+            ## SEND BYE IF NOT REBOOTING
+            if not performActionsDict['do_reboot_ifstuck'] and not performActionsDict['do_reboot']:
+                chan.send('bye\n') # send bye if not rebooting
+            ## REBOOT 
+            if performActionsDict['do_reboot']:
+                chan.send('reboot\n')
+                while not chan.recv_ready():
+                    time.sleep(3)
+                out = chan.recv(9999)
+                if 'Rebooting!' in out.decode("ascii"):
+                    print('+ Successfully rebooted ' + str(ip) + '!')
+            print('+ Successfully got info for ' + str(ip) + '!')
+            success_hosts.append(ip)
+            chan.close()  # Close Shell Channel
+            client.close() # Close the client itself
+
+            if window and performActionsDict['do_get_screen']:
+                f_grab.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + phoneMAC + ' #####\n\n')
+                f_grab.write(window.decode("ascii") + '\n\n')
+            if genConfig and window:
+                configFromScreenGrab(window, phoneMAC, ip)
+
+
+
+
+# TRY EXCEPTIONS
+        except paramiko.AuthenticationException:
+            print('- Bad SSH Credentials: ' + str(ip))
+            fail_hosts.append(ip)
+            client.close()
+        except paramiko.BadHostKeyException:
+            print('- Bad Host Key: ' +str(ip))
+            fail_hosts.append(ip)
+            client.close()
+        except paramiko.SSHException:
+            print('- SSH Exception Error. Possible protocol issue: ' +str(ip))
+            fail_hosts.append(ip)
+            client.close()
+        except:
+            print('- Failed connecting to: ' + str(ip))
+            client.close()
+            fail_hosts.append(ip)
+
+    # Close Window File
+    if performActionsDict['do_get_screen']:
+        f_grab.close()
+
+   # Phone Info CSV
+    if performActionsDict['do_generate_csv']:
+        print('inside IF LOOP for CSV')
+        output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+        outputpath = "output_files"
+        makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+        f = open(outputpath + '/' + output_csv, 'w')
+        
+        csvwriter = csv.writer(f)
+        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC'])
+        for key in phoneInfoList.keys():
+            data = [key]
+            data = data + phoneInfoList[key]
+            csvwriter.writerow(data)
+        f.close()
+        print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
+    print('End of Action function')
+    print(performActionsDict)
+    time.sleep(7)
+    
+
+def configFromScreenGrab(screenGrab, MAC, ip):
+    filename = "SIP" + MAC.upper() + ".cfg" # Set output filename
+    outputpath = 'phone_configs'
+    lineDict = defaultdict()
+    file_logins = []
+    maxlogins = 2
+    file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 3600', 'AUTO_UPDATE_TIME_RANGE 3','AUTOLOGIN_ENABLE 2']
+
+
+    makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+    for line in screenGrab.decode("ascii").splitlines():
+        m = re.search("----\[([0-9][0-9][0-9][0-9]*)\] *, <LineKey#([1-8])", line)
+        if m:
+            lineDict[m.group(2)] = m.group(1)
+    if lineDict:
+        if len(lineDict) > 2:
+            maxlogins = len(lineDict) # set max_login parameter to the number of phone numbers that will be auto-logged in.
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
+        orderedLineDict = OrderedDict(sorted(lineDict.items()))
+        key = 1
+        for k, v in orderedLineDict.items():  # Loop through each phone number in the list for the given MAC and create auto login.
+            file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
+            file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+            key += 1
+        output = open(outputpath + '/' + filename, 'w') # Open Output file.
+        output.write("\n\n".join(file_contents)) # Write static data in the file.
+        output.write("\n\n")
+        output.write("\n\n".join(file_logins)) # Write the auto login data
+        results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
+        output.close() # Close the output file.
+        print('+ SUCCESS - Writing File ' + filename)
+    else:
+        outputpath = 'phone_configs_nokeys'
+        makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
+
+        print('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath)
+        results_file.write('- OOPS: No line keys detected for: ' + str(ip) + ' writing blank file to ' + outputpath + '\n')
+        key = 1
+        file_contents = file_contents + ['MAX_LOGINS '+ str(maxlogins)]
+        file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' ' + '0000000000@' + defaultDomain]
+        file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
+        output = open(outputpath + '/' + filename, 'w') # Open Output file.
+        output.write("\n\n".join(file_contents)) # Write static data in the file.
+        output.write("\n\n")
+        output.write("\n\n".join(file_logins)) # Write the auto login data
+        results_file.write('+ SUCCESS - Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
+        output.close() # Close the output file.
 
 def factory_reset_phone(Local_IPSet):
     clear()
@@ -395,6 +599,8 @@ def print_do_menu():
     menu_entry_indices = terminal_menu.show()
     #print(menu_entry_indices)
     #print(terminal_menu.chosen_menu_entries)
+    if not menu_entry_indices:
+        return
     if 0 in menu_entry_indices:
         performActionsDict['do_acknowledge_banner'] = True
     if 1 in menu_entry_indices:
@@ -433,11 +639,8 @@ def print_do_menu():
     if not proceed.upper() == 'Y':
         cancel()
         return
-    # Main set up for overhead actions like opening files
 
-    # main action for each IP
-    for ip in IPSet:
-        mainActions(ip)
+    mainActions(IPSet, performActionsDict)
 
 def start_pdt_tool():
     if not inputfile == 'None':
