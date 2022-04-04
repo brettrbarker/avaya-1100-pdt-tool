@@ -66,6 +66,15 @@ menu_options = {
     0: 'Exit',
 }
 
+resultsDict = {
+    'Login Banners Acknowledged' : 0,
+    'CSVs Generated' : 0,
+    'Phone Screens Saved to File' : 0,
+    'Autologin Configs Generated' : 0,
+    'Phone Logs Cleared' : 0,
+    'Phones Rebooted' : 0
+}
+
 class IgnorePolicy(paramiko.MissingHostKeyPolicy):
     """
     Policy for ignoring an unknown host key and
@@ -74,6 +83,7 @@ class IgnorePolicy(paramiko.MissingHostKeyPolicy):
 
     def missing_host_key(self, client, hostname, key):
         pass
+
 def print_menu_header():
     print('----------------------------------------------------')
     print('Welcome to the unofficial Avaya 1100 Series PDT Tool')
@@ -90,6 +100,7 @@ def print_menu_header():
         print('     Total IPs in Range: ' + str(len(IPSet)))
     print('     Log File: ' + outputpath + '/' + results_file_name)
     print('----------------------------------------------------')
+
 def print_menu():
     print_menu_header()
     print('Please Choose from the following options:')
@@ -149,6 +160,7 @@ def mainActions(Local_IPSet, performActionsDict):
 # Generic setup data
     clear()
     clear_results()
+    print_menu_header()
     countIPs = len(Local_IPSet)
     now = datetime.datetime.now()
     phoneInfoList = defaultdict(list)
@@ -181,13 +193,16 @@ def mainActions(Local_IPSet, performActionsDict):
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
         f_grab = open(outputpath + '/' + windowData_file, 'w')
 
-
+    clear()
+    print('Running Actions... Please Wait')
  
     # Loop through ALL IP's and perform actions:
     for ip in Local_IPSet:
 # MAIN TRY 
         try:
             window = False # set window to false for each IP before possible screen grab
+            bannercheck = False
+            banner = False
             # Set up client and connect
             client = SSHClient()
             client.set_missing_host_key_policy(IgnorePolicy)
@@ -205,6 +220,23 @@ def mainActions(Local_IPSet, performActionsDict):
             phoneMAC = m.group(3)
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
 
+            # Check for Login Banner or Stuck Logging In
+            if performActionsDict['do_acknowledge_banner']:
+                chan.send('reportWindowData\n')
+                while not chan.recv_ready():
+                    time.sleep(3)
+                bannercheck = chan.recv(9999)
+                for line in bannercheck.decode("ascii").splitlines():
+                        banner = re.search("----\[Login Banner\] *, <Context>", line)
+                        if banner: # if Loginbanner is seen, press Ok and call config again
+                            print('+ SUCCESS: Cleared Login Banner on ' + str(ip))
+                            resultsDict['Login Banners Acknowledged'] += 1
+                            chan.send('sendKey 115 2\n') # Press OK button (SoftKey1)
+                            while not chan.recv_ready():
+                                time.sleep(3)
+                            out = chan.recv(9999)
+
+
             # Screen Grab Command for Window data file or auto login configs
             if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg']:
                 chan.send('reportWindowData\n')
@@ -212,6 +244,7 @@ def mainActions(Local_IPSet, performActionsDict):
                     time.sleep(3)
                 window = chan.recv(9999)
                 if performActionsDict['do_get_screen']:
+                    resultsDict['Phone Screens Saved to File'] += 1
                     print('+ Successfully grabbed screen info for ' + str(ip) + '!')
  
             ## Clear Logs
@@ -234,6 +267,7 @@ def mainActions(Local_IPSet, performActionsDict):
                 if 'cleared' in out.decode("ascii"):
                     print('+ Successfully cleared SIP Log File for ' + str(ip) + '!')
                     sipCleared = True
+                resultsDict['Phone Logs Cleared'] += 1
 
             ## SEND BYE IF NOT REBOOTING
             if not performActionsDict['do_reboot_ifstuck'] and not performActionsDict['do_reboot']:
@@ -246,6 +280,7 @@ def mainActions(Local_IPSet, performActionsDict):
                 out = chan.recv(9999)
                 if 'Rebooting!' in out.decode("ascii"):
                     print('+ Successfully rebooted ' + str(ip) + '!')
+                    resultsDict['Phones Rebooted'] += 1
             print('+ Successfully got info for ' + str(ip) + '!')
             success_hosts.append(ip)
             chan.close()  # Close Shell Channel
@@ -256,6 +291,7 @@ def mainActions(Local_IPSet, performActionsDict):
                 f_grab.write(window.decode("ascii") + '\n\n')
             if genConfig and window:
                 configFromScreenGrab(window, phoneMAC, ip)
+                resultsDict['Autologin Configs Generated'] += 1
 
 
 
@@ -284,7 +320,7 @@ def mainActions(Local_IPSet, performActionsDict):
 
    # Phone Info CSV
     if performActionsDict['do_generate_csv']:
-        print('inside IF LOOP for CSV')
+        #print('inside IF LOOP for CSV')
         output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
         outputpath = "output_files"
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
@@ -296,11 +332,13 @@ def mainActions(Local_IPSet, performActionsDict):
             data = [key]
             data = data + phoneInfoList[key]
             csvwriter.writerow(data)
+            resultsDict['CSVs Generated'] += 1
         f.close()
         print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
-    print('End of Action function')
-    print(performActionsDict)
-    time.sleep(7)
+    #print('End of Action function')
+    #print(performActionsDict)
+    process_results('actions', resultsDict)
+
     
 
 def configFromScreenGrab(screenGrab, MAC, ip):
@@ -446,19 +484,11 @@ def perform_factory_reset(ip):
         return -1
     return
 
-def process_results(source):
-    if source == 'reboot_phones':
-        task = 'Reboot Phones'
-    elif source == 'clear_logs':
-        task = 'Clear Phone Logs'
+def process_results(source, resultActionDict = False):
+    if source == 'actions':
+        task = 'Perform Actions'
     elif source == 'factory_reset':
         task = 'Factory Reset Phones'
-    elif source =='get_info':
-        task = 'Get Phone Info'
-    elif source == 'ping_ip':
-        task = 'Ping All IPs'
-    elif source == 'get_window':
-        task = 'Report Window Data'
     else:
         print('Error: Unknown Source Called Results Function.')
         time.sleep(1)
@@ -469,6 +499,11 @@ def process_results(source):
     print('# Total Attempted: ' + str(len(IPSet)))
     print('# Successful: ' + str(len(success_hosts)))
     print('# Failures: ' + str(len(fail_hosts)))
+    print('##########################\n')
+    if resultActionDict:
+        for key in resultActionDict:
+            if resultActionDict[key] > 0:
+                print('#', key, '--', str(resultActionDict[key]))
     print('##########################\n')
     results_file.write('Detailed Results for Task: ' + task + '\n')
     results_file.write('+++ SUCCESSFUL +++\n')
@@ -482,6 +517,11 @@ def process_results(source):
     results_file.write('# Total Attempted: ' + str(len(IPSet)) + '\n')
     results_file.write('# Successful: ' + str(len(success_hosts)) + '\n')
     results_file.write('# Failures: ' + str(len(fail_hosts)) + '\n')
+    results_file.write('##########################\n')
+    if resultActionDict:
+        for key in resultActionDict:
+            if resultActionDict[key] > 0:
+                results_file.write('# ' + key + ' -- ' + str(resultActionDict[key]) + '\n')
     results_file.write('##########################\n\n')
     time.sleep(1)
     input('Press Enter to Return to Menu')
@@ -589,7 +629,8 @@ def print_do_menu():
     }
 
     terminal_menu = TerminalMenu(
-        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
+        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone"],
+        # Taking , "Reboot Phone if stuck logging in" out of list for now. May implement later.
         multi_select=True,
         show_multi_select_hint=True,
     )
