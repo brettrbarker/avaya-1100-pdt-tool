@@ -1,4 +1,39 @@
 #!/usr/bin/env python3
+################### AVAYA 1100 SERIES PDT TOOL ######################
+## Python tool to easily integrate with an Avaya 1100 series PDT menu via SSH.
+## Input CSV with at least columns: IP
+## 
+## Requires Python 3. For older linux versions with both, use "python3" to initiate script.
+##
+## USAGE: python3 pdt-tool.py [csv input file]
+## EXAMPLE: python3 pdt-tool.py sample-csv.csv
+## 
+## Version: 2.0.0.alpha1
+## Updated: 2022-04-04
+## Author: Brett Barker - brett.barker@brbtechsolutions.com 
+##
+## CHANGELOG:
+## 1.4.0 - Added Ping option to ping a range of IP addresses and return True/False
+## 1.4.1 - Added ability to recycle successful ping results as the new IP list. Will also look for "Ping"
+##         as a header in the input file and ask if you only want to use "True" values.
+## 1.5.0 - Added feature to get phone screen data using reportWindowData command
+## 1.5.1 - Added IP validation to input file IP addresses
+## 1.5.2 - Added MAC address to reportWindowData file. 
+##         Added wait timers to all SSH invokes to try to increase reliability.
+## 1.5.3 - Added sleep timer after factory reset
+## 1.5.4 - Improved error exception handling.
+##         Fixed bug with not closing client on failed attempt.
+## 1.6.0 - Ignore all host keys and accept them no matter what.
+## 1.6.1 - Major addition. Option 6 can now generate the phone config files based on phone numbers detected in screen grab.
+## 1.6.2 - Fixed dates on output files. 
+##         Options can be run more than once without exiting and won't overwrite as long as not started within the same minute.
+##         Set phone config file to overwrite previous.
+## 1.6.3 - Made the detected line key a minimum of 3 digits.    
+## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
+## 2.0.0.alpha1 - New multi select sub menu to choose multiple actions to perform at once.
+##
+##
+########################################BRB####################################################
 
 from simple_term_menu import TerminalMenu
 from paramiko import SSHClient
@@ -253,7 +288,7 @@ def mainActions(Local_IPSet, performActionsDict):
                 window = chan.recv(9999)
                 if performActionsDict['do_get_screen']:
                     resultsDict['Phone Screens Saved to File'] += 1
-                    print('+ Successfully grabbed screen info for ' + str(ip) + '!')
+                    print('+ SUCCESS: Grabbed screen info for ' + str(ip) + '!')
  
             ## Clear Logs
             if performActionsDict['do_clear_logs']:
@@ -265,7 +300,7 @@ def mainActions(Local_IPSet, performActionsDict):
                     time.sleep(3)
                 out = chan.recv(9999)
                 if 'cleared' in out.decode("ascii"):
-                    print('+ Successfully cleared ECR Log File for ' + str(ip) + '!')
+                    print('+ SUCCESS: Cleared ECR Log File for ' + str(ip) + '!')
                     ecrCleared = True
                 ## CLEAR LOG 1
                 chan.send('clearlog 1\n')
@@ -273,7 +308,7 @@ def mainActions(Local_IPSet, performActionsDict):
                     time.sleep(3)
                 out = chan.recv(9999)
                 if 'cleared' in out.decode("ascii"):
-                    print('+ Successfully cleared SIP Log File for ' + str(ip) + '!')
+                    print('+ SUCCESS: Cleared SIP Log File for ' + str(ip) + '!')
                     sipCleared = True
                 resultsDict['Phone Logs Cleared'] += 1
 
@@ -287,7 +322,7 @@ def mainActions(Local_IPSet, performActionsDict):
                     time.sleep(3)
                 out = chan.recv(9999)
                 if 'Rebooting!' in out.decode("ascii"):
-                    print('+ Successfully rebooted ' + str(ip) + '!')
+                    print('+ SUCCESS: Rebooted ' + str(ip) + '!')
                     resultsDict['Phones Rebooted'] += 1
             print('## Completed Running Actions for ' + str(ip) + '!')
             success_hosts.append(ip)
@@ -378,9 +413,9 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         output.write("\n\n".join(file_contents)) # Write static data in the file.
         output.write("\n\n")
         output.write("\n\n".join(file_logins)) # Write the auto login data
-        results_file.write('+ SUCCESS - Writing File ' + filename + '\n')
+        results_file.write('+ SUCCESS: Writing File ' + filename + '\n')
         output.close() # Close the output file.
-        print('+ SUCCESS - Writing File ' + filename)
+        print('+ SUCCESS: Writing File ' + filename)
     else:
         outputpath = 'phone_configs_nokeys'
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
@@ -395,7 +430,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         output.write("\n\n".join(file_contents)) # Write static data in the file.
         output.write("\n\n")
         output.write("\n\n".join(file_logins)) # Write the auto login data
-        results_file.write('+ SUCCESS - Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
+        results_file.write('+ SUCCESS: Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
         output.close() # Close the output file.
 
 def factory_reset_phone(Local_IPSet):
@@ -455,10 +490,9 @@ def perform_factory_reset(ip):
                 # if 'Incorrect MAC-address' in out.decode("ascii"):
                 #     fail_hosts.append(ip)
                 # else:
-                print('+ Successfully factory reset: ' + str(ip))
-                print('Sending the Droids to Anchorhead...', end=" ")
+                print('Sending the Droids to Anchorhead...')
                 time.sleep(10)
-                print('Done.')
+                print('+ SUCCESS: Factory Reset: ' + str(ip))
                 success_hosts.append(ip)
             else:
                 fail_hosts.append(ip)
@@ -497,6 +531,8 @@ def process_results(source, resultActionDict = False):
         task = 'Perform Actions'
     elif source == 'factory_reset':
         task = 'Factory Reset Phones'
+    elif source == 'ping_ip':
+        task = 'Ping All IPs'
     else:
         print('Error: Unknown Source Called Results Function.')
         time.sleep(1)
@@ -604,7 +640,7 @@ def pingIPs(Local_IPSet):
         data = [str(ip),str(status)]
         if status == True:
             numSuccess =+ 1
-            print('+ Successfully pinged: ' + str(ip))
+            print('+ SUCCESS: Pinged ' + str(ip))
             success_hosts.append(ip)
         csvwriter.writerow(data)
 
