@@ -1,2 +1,14 @@
+bcrypt==3.2.0
+cffi==1.15.0
+cryptography==36.0.2
+importlib-resources==5.4.0
 netaddr==0.8.0
 paramiko==2.4.2
+pip==21.3.1
+pyasn1==0.4.8
+pycparser==2.21
+PyNaCl==1.5.0
+setuptools==39.2.0
+simple-term-menu==1.4.1
+six==1.16.0
+zipp==3.6.0
