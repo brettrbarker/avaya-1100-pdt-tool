@@ -203,6 +203,7 @@ def mainActions(Local_IPSet, performActionsDict):
             window = False # set window to false for each IP before possible screen grab
             bannercheck = False
             banner = False
+            stucklogin = False
             # Set up client and connect
             client = SSHClient()
             client.set_missing_host_key_policy(IgnorePolicy)
@@ -221,13 +222,18 @@ def mainActions(Local_IPSet, performActionsDict):
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
 
             # Check for Login Banner or Stuck Logging In
-            if performActionsDict['do_acknowledge_banner']:
+            if performActionsDict['do_acknowledge_banner'] or performActionsDict['do_reboot_ifstuck']:
                 chan.send('reportWindowData\n')
                 while not chan.recv_ready():
                     time.sleep(3)
                 bannercheck = chan.recv(9999)
                 for line in bannercheck.decode("ascii").splitlines():
-                        banner = re.search("----\[Login Banner\] *, <Context>", line)
+                        if performActionsDict['do_acknowledge_banner']:
+                            banner = re.search("----\[Login Banner\] *, <Context>", line)
+                        if performActionsDict['do_reboot_ifstuck']:
+                            stucklogin = re.search("----\[Logging in user ...     \] *, <InfoLine#1>,", line)
+                        if stucklogin:
+                            print('STUCK LOGGING IN DETECTED')
                         if banner: # if Loginbanner is seen, press Ok and call config again
                             print('+ SUCCESS: Cleared Login Banner on ' + str(ip))
                             resultsDict['Login Banners Acknowledged'] += 1
@@ -281,7 +287,7 @@ def mainActions(Local_IPSet, performActionsDict):
                 if 'Rebooting!' in out.decode("ascii"):
                     print('+ Successfully rebooted ' + str(ip) + '!')
                     resultsDict['Phones Rebooted'] += 1
-            print('+ Successfully got info for ' + str(ip) + '!')
+            print('## Completed Running Actions for ' + str(ip) + '!')
             success_hosts.append(ip)
             chan.close()  # Close Shell Channel
             client.close() # Close the client itself
@@ -334,7 +340,7 @@ def mainActions(Local_IPSet, performActionsDict):
             csvwriter.writerow(data)
             resultsDict['CSVs Generated'] += 1
         f.close()
-        print('\n*****\nOutput File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
+        print('\n*****\nCSV Phone Info Output File Saved To: ' + outputpath + '/' + output_csv + '\n*****')
     #print('End of Action function')
     #print(performActionsDict)
     process_results('actions', resultsDict)
@@ -499,12 +505,13 @@ def process_results(source, resultActionDict = False):
     print('# Total Attempted: ' + str(len(IPSet)))
     print('# Successful: ' + str(len(success_hosts)))
     print('# Failures: ' + str(len(fail_hosts)))
-    print('##########################\n')
+    print('##########################')
     if resultActionDict:
+        print('### Action Details ###')
         for key in resultActionDict:
             if resultActionDict[key] > 0:
                 print('#', key, '--', str(resultActionDict[key]))
-    print('##########################\n')
+        print('##########################\n')
     results_file.write('Detailed Results for Task: ' + task + '\n')
     results_file.write('+++ SUCCESSFUL +++\n')
     for each in success_hosts:
@@ -519,15 +526,17 @@ def process_results(source, resultActionDict = False):
     results_file.write('# Failures: ' + str(len(fail_hosts)) + '\n')
     results_file.write('##########################\n')
     if resultActionDict:
+        results_file.write('### Action Details ###\n')
         for key in resultActionDict:
             if resultActionDict[key] > 0:
                 results_file.write('# ' + key + ' -- ' + str(resultActionDict[key]) + '\n')
-    results_file.write('##########################\n\n')
+        results_file.write('##########################\n\n')
     time.sleep(1)
     input('Press Enter to Return to Menu')
     clear()
 
 def clear_results():
+    global resultsDict
     global fail_hosts
     global success_hosts
     global numSuccess
@@ -536,6 +545,14 @@ def clear_results():
     success_hosts = []
     numSuccess = 0
     numFail = 0
+    resultsDict = {
+    'Login Banners Acknowledged' : 0,
+    'CSVs Generated' : 0,
+    'Phone Screens Saved to File' : 0,
+    'Autologin Configs Generated' : 0,
+    'Phone Logs Cleared' : 0,
+    'Phones Rebooted' : 0
+    }
 
 def cancel():
     print('\nCancelling...\n')
@@ -629,7 +646,7 @@ def print_do_menu():
     }
 
     terminal_menu = TerminalMenu(
-        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone"],
+        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
         # Taking , "Reboot Phone if stuck logging in" out of list for now. May implement later.
         multi_select=True,
         show_multi_select_hint=True,
