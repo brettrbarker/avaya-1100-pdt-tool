@@ -62,7 +62,7 @@ menu_options = {
     3: 'List IP Addresses',
     4: 'Ping All IPs',
     5: 'Perform Actions on Phones',
-    9: 'Factory Reset Phones',
+    6: 'Factory Reset Phones',
     0: 'Exit',
 }
 
@@ -204,6 +204,7 @@ def mainActions(Local_IPSet, performActionsDict):
             bannercheck = False
             banner = False
             stucklogin = False
+            rebootStuck = False
             # Set up client and connect
             client = SSHClient()
             client.set_missing_host_key_policy(IgnorePolicy)
@@ -233,7 +234,8 @@ def mainActions(Local_IPSet, performActionsDict):
                         if performActionsDict['do_reboot_ifstuck']:
                             stucklogin = re.search("----\[Logging in user ...     \] *, <InfoLine#1>,", line)
                         if stucklogin:
-                            print('STUCK LOGGING IN DETECTED')
+                            print('+ STUCK LOGGING IN DETECTED')
+                            rebootStuck = True
                         if banner: # if Loginbanner is seen, press Ok and call config again
                             print('+ SUCCESS: Cleared Login Banner on ' + str(ip))
                             resultsDict['Login Banners Acknowledged'] += 1
@@ -276,10 +278,10 @@ def mainActions(Local_IPSet, performActionsDict):
                 resultsDict['Phone Logs Cleared'] += 1
 
             ## SEND BYE IF NOT REBOOTING
-            if not performActionsDict['do_reboot_ifstuck'] and not performActionsDict['do_reboot']:
+            if not rebootStuck and not performActionsDict['do_reboot']:
                 chan.send('bye\n') # send bye if not rebooting
             ## REBOOT 
-            if performActionsDict['do_reboot']:
+            if performActionsDict['do_reboot'] or rebootStuck:
                 chan.send('reboot\n')
                 while not chan.recv_ready():
                     time.sleep(3)
@@ -454,9 +456,9 @@ def perform_factory_reset(ip):
                 #     fail_hosts.append(ip)
                 # else:
                 print('+ Successfully factory reset: ' + str(ip))
-                print('Sleeping...')
+                print('Sending the Droids to Anchorhead...', end=" ")
                 time.sleep(10)
-                print('Done Sleeping.')
+                print('Done.')
                 success_hosts.append(ip)
             else:
                 fail_hosts.append(ip)
@@ -764,7 +766,7 @@ def start_pdt_tool():
             pingIPs(IPSet)
         elif option == 5:
             print_do_menu()
-        elif option == 9:
+        elif option == 6:
             factory_reset_phone(IPSet)
         elif option == 0:
             if not inputfile == 'None':
@@ -775,7 +777,7 @@ def start_pdt_tool():
             clear()
             exit()
         else:
-            print('\n***Invalid option. Please enter a number between 1 and 0.\n')
+            print('\n***Invalid option. Please enter a number between 1 and 6 or 0 to Exit.\n')
             time.sleep(2)
 
 if __name__=='__main__':
