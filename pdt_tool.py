@@ -203,6 +203,7 @@ def mainActions(Local_IPSet, performActionsDict):
     global defaultPassword
     windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
     genConfig = False
+    phoneNums = []
 
 # Prep Info for Auto Login Configs
     if performActionsDict['do_generate_confg']:
@@ -333,7 +334,8 @@ def mainActions(Local_IPSet, performActionsDict):
                 f_grab.write('------------------------------\n##### REPORT WINDOW DATA #####\n##### IP: ' + str(ip) + ' #####\n##### MAC: ' + phoneMAC + ' #####\n\n')
                 f_grab.write(window.decode("ascii") + '\n\n')
             if genConfig and window:
-                configFromScreenGrab(window, phoneMAC, ip)
+                phoneNums = configFromScreenGrab(window, phoneMAC, ip)
+                phoneInfoList[ip] = phoneInfoList[ip] + phoneNums
                 resultsDict['Autologin Configs Generated'] += 1
 
 
@@ -370,7 +372,7 @@ def mainActions(Local_IPSet, performActionsDict):
         f = open(outputpath + '/' + output_csv, 'w')
         
         csvwriter = csv.writer(f)
-        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC'])
+        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
         for key in phoneInfoList.keys():
             data = [key]
             data = data + phoneInfoList[key]
@@ -391,7 +393,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
     file_logins = []
     maxlogins = 2
     file_contents = ['SLOW_START_200OK NO','ENABLE_LOCAL_ADMIN_UI NO','AUTO_UPDATE YES','AUTO_UPDATE_TIME 3600', 'AUTO_UPDATE_TIME_RANGE 3','AUTOLOGIN_ENABLE 2']
-
+    phoneNums = []
 
     makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
 
@@ -409,6 +411,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
             file_logins = file_logins + ['AUTOLOGIN_ID_KEY' + str(key).zfill(2) + ' '  + v + '@' + defaultDomain]
             file_logins = file_logins + ['AUTOLOGIN_PASSWD_KEY' + str(key).zfill(2) + ' ' + str(defaultPassword)]
             key += 1
+            phoneNums.append(v)
         output = open(outputpath + '/' + filename, 'w') # Open Output file.
         output.write("\n\n".join(file_contents)) # Write static data in the file.
         output.write("\n\n")
@@ -416,6 +419,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         results_file.write('+ SUCCESS: Writing File ' + filename + '\n')
         output.close() # Close the output file.
         print('+ SUCCESS: Writing File ' + filename)
+        return phoneNums
     else:
         outputpath = 'phone_configs_nokeys'
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
@@ -432,6 +436,7 @@ def configFromScreenGrab(screenGrab, MAC, ip):
         output.write("\n\n".join(file_logins)) # Write the auto login data
         results_file.write('+ SUCCESS: Writing File for BLANK PHONE NUMBER  ' + filename + '\n')
         output.close() # Close the output file.
+        return phoneNums
 
 def factory_reset_phone(Local_IPSet):
     clear()
