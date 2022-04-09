@@ -8,8 +8,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 2.0.0.alpha1
-## Updated: 2022-04-04
+## Version: 2.0.0.alpha2
+## Updated: 2022-04-09
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -31,7 +31,7 @@
 ## 1.6.3 - Made the detected line key a minimum of 3 digits.    
 ## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
 ## 2.0.0.alpha1 - New multi select sub menu to choose multiple actions to perform at once.
-##
+## 2.0.0.alpha1 - adds phone nubmers to CSV if generate confige also selected.
 ##
 ########################################BRB####################################################
 
