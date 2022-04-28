@@ -635,7 +635,7 @@ def pingIPs(Local_IPSet):
     csvwriter.writerow(['IP', 'Ping'])
     
     for ip in Local_IPSet:
-        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        response = system("ping -c 1 -W 1 " + ip + " > /dev/null 2>&1")
         status = True
         if not response == 0:
             print('- Ping Failed to: ' + str(ip))
