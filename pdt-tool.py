@@ -7,8 +7,8 @@
 ## USAGE: python3 pdt-tool.py [csv input file]
 ## EXAMPLE: python3 pdt-tool.py sample-csv.csv
 ## 
-## Version: 1.6.4
-## Updated: 2022-03-20
+## Version: 1.6.5
+## Updated: 2022-04-28
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -29,7 +29,7 @@
 ##         Set phone config file to overwrite previous.
 ## 1.6.3 - Made the detected line key a minimum of 3 digits.    
 ## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
-##
+## 1.6.5 - Added 500ms timeout to ping command. Pings will fail after 500 miliseconds
 ##
 ########################################BRB####################################################
 
@@ -718,7 +718,7 @@ def pingIPs(Local_IPSet):
     csvwriter.writerow(['IP', 'Ping'])
     
     for ip in Local_IPSet:
-        response = system("ping -c 1 " + ip + " > /dev/null 2>&1")
+        response = system("ping -c 1 -W 0.5 " + ip + " > /dev/null 2>&1")
         status = True
         if not response == 0:
             print('- Ping Failed to: ' + str(ip))
