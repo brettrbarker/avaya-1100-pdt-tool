@@ -5,11 +5,11 @@
 ## 
 ## Requires Python 3. For older linux versions with both, use "python3" to initiate script.
 ##
-## USAGE: python3 pdt-tool.py [csv input file]
-## EXAMPLE: python3 pdt-tool.py sample-csv.csv
+## USAGE: python3 pdt-tool.py -f [csv input file]
+## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.0.alpha2
-## Updated: 2022-04-09
+## Version: 2.0.1
+## Updated: 2022-04-30
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -32,6 +32,8 @@
 ## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
 ## 2.0.0.alpha1 - New multi select sub menu to choose multiple actions to perform at once.
 ## 2.0.0.alpha1 - adds phone nubmers to CSV if generate confige also selected.
+## ******* Taking version 2 out of alpha
+## 2.0.1 - Added 1 second timeout to ping command. Returns faster from failed pings. 
 ##
 ########################################BRB####################################################
 
