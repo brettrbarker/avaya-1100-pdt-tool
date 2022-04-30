@@ -9,7 +9,7 @@ To install the dependencies on an offline system:
 
 I've included some the dependencies that will work for RHEL7 and RHEL8. If you have a different version that won't work with these, you will need to obtain the dependencies with pip online or through another method.
 ```
-pip33 install --no-index dependencies/rhel7/*
+pip3 install --no-index dependencies/rhel7/*
 OR
 pip3 install --no-index dependencies/rhel8/*
 ```
