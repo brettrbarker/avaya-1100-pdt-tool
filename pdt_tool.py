@@ -8,7 +8,7 @@
 ## USAGE: python3 pdt-tool.py -f [csv input file]
 ## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.1
+## Version: 2.0.2
 ## Updated: 2022-04-30
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -34,7 +34,8 @@
 ## 2.0.0.alpha1 - adds phone nubmers to CSV if generate confige also selected.
 ## ******* Taking version 2 out of alpha
 ## 2.0.1 - Added 1 second timeout to ping command. Returns faster from failed pings. 
-##
+## 2.0.2 - Version bump for new readme file.
+## 
 ########################################BRB####################################################
 
 from simple_term_menu import TerminalMenu
