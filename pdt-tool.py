@@ -29,7 +29,7 @@
 ##         Set phone config file to overwrite previous.
 ## 1.6.3 - Made the detected line key a minimum of 3 digits.    
 ## 1.6.4 - Now writes blank config files for successful screen grabs that don't detect a line key.
-## 1.6.5 - Added 500ms timeout to ping command. Pings will fail after 500 miliseconds
+## 1.6.5 - Added 1s timeout to ping command. Pings will fail after 1 second
 ##
 ########################################BRB####################################################
 
@@ -718,7 +718,7 @@ def pingIPs(Local_IPSet):
     csvwriter.writerow(['IP', 'Ping'])
     
     for ip in Local_IPSet:
-        response = system("ping -c 1 -W 0.5 " + ip + " > /dev/null 2>&1")
+        response = system("ping -c 1 -W 1 " + ip + " > /dev/null 2>&1")
         status = True
         if not response == 0:
             print('- Ping Failed to: ' + str(ip))
