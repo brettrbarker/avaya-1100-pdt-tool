@@ -256,10 +256,36 @@ def mainActions(Local_IPSet, performActionsDict):
             out = chan.recv(9999)
             ## GET Phone Info
             m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
+            print('-----first m-----')
+            print(m)
             phoneModel = m.group(1)
             phoneFirmware = m.group(2)
             phoneMAC = m.group(3)
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
+            ### GET NETINFO
+            chan.send('netinfo\n')
+            while not chan.recv_ready():
+                time.sleep(3)
+            out = chan.recv(9999)
+            print('-----out-----')
+            print(out.decode("ascii"))
+            mNetinfo = re.search('.*------common data-------.*\r\n(Network.*)\r\n\r\n--EEPROM.*Voice Vlan ID is set to (.*), VLAN ID is ([0-9])*.*\r\n', out.decode("ascii"), flags=re.DOTALL)
+            print('-----mNetinfo-----')
+            print(mNetinfo)
+            netinfo = mNetinfo.group(1)
+            print('-----netinfo-----')
+            print(type(netinfo))
+            print(netinfo)
+            print('-----second group - vlan setting-----')
+            print(mNetinfo.group(2))
+            print('-----third  group - vlan id-----')
+            print(mNetinfo.group(3))
+            print('-----phoneinfolist-----')
+            print(str(phoneInfoList[ip]))
+            print(type(phoneInfoList[ip]))
+            phoneInfoList[ip].append(netinfo)
+            print('-----phoneInfoList------')
+            print(phoneInfoList[ip])
 
             # Check for Login Banner or Stuck Logging In
             if performActionsDict['do_acknowledge_banner'] or performActionsDict['do_reboot_ifstuck']:
@@ -375,7 +401,7 @@ def mainActions(Local_IPSet, performActionsDict):
         f = open(outputpath + '/' + output_csv, 'w')
         
         csvwriter = csv.writer(f)
-        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
+        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'netinfo' , 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
         for key in phoneInfoList.keys():
             data = [key]
             data = data + phoneInfoList[key]
