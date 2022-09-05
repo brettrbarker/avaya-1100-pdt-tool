@@ -290,9 +290,9 @@ def mainActions(Local_IPSet, performActionsDict):
                         okbutton = re.search("----\[Ok\] *, <SoftKey#1>", line)
                         if banner:
                             bannerFound = True
-                            print('Debug: banner found')
-                        if okbutton:
-                            print('Debug: ok button found')
+                            #print('Debug: banner found')
+                        #if okbutton:
+                            #print('Debug: ok button found')
                     if performActionsDict['do_reboot_ifstuck']:
                         stucklogin = re.search("----\[Logging in user ...     \] *, <InfoLine#1>,", line)
                     if stucklogin:
