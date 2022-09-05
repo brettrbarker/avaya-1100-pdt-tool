@@ -39,7 +39,6 @@
 ## 
 ########################################BRB####################################################
 
-from posixpath import basename
 from simple_term_menu import TerminalMenu
 from paramiko import SSHClient
 import time
