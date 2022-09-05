@@ -256,36 +256,21 @@ def mainActions(Local_IPSet, performActionsDict):
             out = chan.recv(9999)
             ## GET Phone Info
             m = re.search('.*connected to (.*). \r\r\nHW ID     :.*\r\nRAM size  :.*\r\nHW version.*\r\nFW version: (.*)\r\nMAC Address = (.*)\r\nIP', out.decode("ascii"))
-            print('-----first m-----')
-            print(m)
             phoneModel = m.group(1)
             phoneFirmware = m.group(2)
             phoneMAC = m.group(3)
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
-            ### GET NETINFO
-            chan.send('netinfo\n')
-            while not chan.recv_ready():
-                time.sleep(3)
-            out = chan.recv(9999)
-            print('-----out-----')
-            print(out.decode("ascii"))
-            mNetinfo = re.search('.*------common data-------.*\r\n(Network.*)\r\n\r\n--EEPROM.*Voice Vlan ID is set to (.*), VLAN ID is ([0-9])*.*\r\n', out.decode("ascii"), flags=re.DOTALL)
-            print('-----mNetinfo-----')
-            print(mNetinfo)
-            netinfo = mNetinfo.group(1)
-            print('-----netinfo-----')
-            print(type(netinfo))
-            print(netinfo)
-            print('-----second group - vlan setting-----')
-            print(mNetinfo.group(2))
-            print('-----third  group - vlan id-----')
-            print(mNetinfo.group(3))
-            print('-----phoneinfolist-----')
-            print(str(phoneInfoList[ip]))
-            print(type(phoneInfoList[ip]))
-            phoneInfoList[ip].append(netinfo)
-            print('-----phoneInfoList------')
-            print(phoneInfoList[ip])
+            if performActionsDict['do_generate_csv']:
+                ### GET NETINFO
+                chan.send('netinfo\n') # send netinfo command
+                while not chan.recv_ready():
+                    time.sleep(3)
+                out = chan.recv(9999) # receive data from netinfo
+                # regex search netinfo to parse output
+                mNetinfo = re.search('.*Netmask = (.*)\r\nDefalt gateway ip address = (.*)\r\n\r\n-------Provisioning.*Provisioning server name: (.*)\r\nProvisioning protocol: (.*)\r\nProvisioning port.*DHCP address = (.*)\r\nDHCP respond.*Voice Vlan ID is set to (.*), VLAN ID is ([0-9])*.*\r\n', out.decode("ascii"), flags=re.DOTALL)
+                for x in range(1,8):
+                    phoneInfoList[ip].append(mNetinfo.group(x))
+
 
             # Check for Login Banner or Stuck Logging In
             if performActionsDict['do_acknowledge_banner'] or performActionsDict['do_reboot_ifstuck']:
@@ -310,8 +295,8 @@ def mainActions(Local_IPSet, performActionsDict):
                             out = chan.recv(9999)
 
 
-            # Screen Grab Command for Window data file or auto login configs
-            if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg']:
+            # Screen Grab Command for Window data file or auto login configs or CSV to get phone numbers
+            if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg'] or performActionsDict['do_generate_csv']:
                 chan.send('reportWindowData\n')
                 while not chan.recv_ready():
                     time.sleep(3)
@@ -401,7 +386,9 @@ def mainActions(Local_IPSet, performActionsDict):
         f = open(outputpath + '/' + output_csv, 'w')
         
         csvwriter = csv.writer(f)
-        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'netinfo' , 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
+        # Write CSV Header Row
+        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'Subnet Mask', 'Default Gateway', 'Prov Server', 'Prov Proto', 'DHCP Server', 'VLAN Status', 'VLAN ID' , 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
+        # Write Rows for each IP (phone) in dictionary.
         for key in phoneInfoList.keys():
             data = [key]
             data = data + phoneInfoList[key]
