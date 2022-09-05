@@ -240,6 +240,7 @@ def mainActions(Local_IPSet, performActionsDict):
 # MAIN TRY 
         try:
             window = False # set window to false for each IP before possible screen grab
+            phoneNums = [] # reset phoneNums list to empty
             bannercheck = False
             banner = False
             stucklogin = False
@@ -260,8 +261,9 @@ def mainActions(Local_IPSet, performActionsDict):
             phoneFirmware = m.group(2)
             phoneMAC = m.group(3)
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
+ 
+            ### GET NETINFO to add to CSV
             if performActionsDict['do_generate_csv']:
-                ### GET NETINFO
                 chan.send('netinfo\n') # send netinfo command
                 while not chan.recv_ready():
                     time.sleep(3)
@@ -351,6 +353,17 @@ def mainActions(Local_IPSet, performActionsDict):
                 phoneNums = configFromScreenGrab(window, phoneMAC, ip)
                 phoneInfoList[ip] = phoneInfoList[ip] + phoneNums
                 resultsDict['Autologin Configs Generated'] += 1
+
+            # Get the Phone numbers from the screen for CSV even if not generating config files
+            if window and performActionsDict['do_generate_csv'] and not phoneNums:
+                for line in window.decode("ascii").splitlines():
+                    m = re.search("----\[([0-9][0-9][0-9]*)\] *, <LineKey#([1-8])", line)
+                    if m:
+                        phoneNums.append(m.group(1))
+                phoneNums.reverse()
+                phoneInfoList[ip] = phoneInfoList[ip] + phoneNums
+
+                
 
 
 
@@ -705,7 +718,7 @@ def print_do_menu():
     }
 
     terminal_menu = TerminalMenu(
-        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
+        ["Acknowledge Login Banner","Generate Phone Info CSV", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
         # Taking , "Reboot Phone if stuck logging in" out of list for now. May implement later.
         multi_select=True,
         show_multi_select_hint=True,
