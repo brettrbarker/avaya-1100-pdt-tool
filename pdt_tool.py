@@ -8,8 +8,8 @@
 ## USAGE: python3 pdt-tool.py -f [csv input file]
 ## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.2
-## Updated: 2022-04-30
+## Version: 2.0.3
+## Updated: 2022-09-05
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -35,9 +35,11 @@
 ## ******* Taking version 2 out of alpha
 ## 2.0.1 - Added 1 second timeout to ping command. Returns faster from failed pings. 
 ## 2.0.2 - Version bump for new readme file.
+## 2.0.3 - Added much more info the CSV file generated and changed the Login banner button to press any OK button.
 ## 
 ########################################BRB####################################################
 
+from posixpath import basename
 from simple_term_menu import TerminalMenu
 from paramiko import SSHClient
 import time
@@ -240,8 +242,11 @@ def mainActions(Local_IPSet, performActionsDict):
 # MAIN TRY 
         try:
             window = False # set window to false for each IP before possible screen grab
+            phoneNums = [] # reset phoneNums list to empty
             bannercheck = False
             banner = False
+            bannerFound = False
+            okbutton = False
             stucklogin = False
             rebootStuck = False
             # Set up client and connect
@@ -260,32 +265,56 @@ def mainActions(Local_IPSet, performActionsDict):
             phoneFirmware = m.group(2)
             phoneMAC = m.group(3)
             phoneInfoList[ip] = [phoneModel, phoneFirmware, phoneMAC]
+ 
+            ### GET NETINFO to add to CSV
+            if performActionsDict['do_generate_csv']:
+                chan.send('netinfo\n') # send netinfo command
+                while not chan.recv_ready():
+                    time.sleep(3)
+                out = chan.recv(9999) # receive data from netinfo
+                # regex search netinfo to parse output
+                mNetinfo = re.search('.*Netmask = (.*)\r\nDefalt gateway ip address = (.*)\r\n\r\n-------Provisioning.*Provisioning server name: (.*)\r\nProvisioning protocol: (.*)\r\nProvisioning port.*DHCP address = (.*)\r\nDHCP respond.*Voice Vlan ID is set to (.*), VLAN ID is ([0-9])*.*\r\n', out.decode("ascii"), flags=re.DOTALL)
+                for x in range(1,8):
+                    phoneInfoList[ip].append(mNetinfo.group(x))
 
-            # Check for Login Banner or Stuck Logging In
+
+            # Check for Login Banner or Stuck Logging In or OK button
             if performActionsDict['do_acknowledge_banner'] or performActionsDict['do_reboot_ifstuck']:
                 chan.send('reportWindowData\n')
                 while not chan.recv_ready():
                     time.sleep(3)
                 bannercheck = chan.recv(9999)
                 for line in bannercheck.decode("ascii").splitlines():
-                        if performActionsDict['do_acknowledge_banner']:
-                            banner = re.search("----\[Login Banner\] *, <Context>", line)
-                        if performActionsDict['do_reboot_ifstuck']:
-                            stucklogin = re.search("----\[Logging in user ...     \] *, <InfoLine#1>,", line)
-                        if stucklogin:
-                            print('+ STUCK LOGGING IN DETECTED')
-                            rebootStuck = True
-                        if banner: # if Loginbanner is seen, press Ok and call config again
-                            print('+ SUCCESS: Cleared Login Banner on ' + str(ip))
-                            resultsDict['Login Banners Acknowledged'] += 1
-                            chan.send('sendKey 115 2\n') # Press OK button (SoftKey1)
-                            while not chan.recv_ready():
-                                time.sleep(3)
-                            out = chan.recv(9999)
+                    if performActionsDict['do_acknowledge_banner']:
+                        banner = re.search("----\[Login Banner\] *, <Context>", line)
+                        okbutton = re.search("----\[Ok\] *, <SoftKey#1>", line)
+                        if banner:
+                            bannerFound = True
+                            #print('Debug: banner found')
+                        #if okbutton:
+                            #print('Debug: ok button found')
+                    if performActionsDict['do_reboot_ifstuck']:
+                        stucklogin = re.search("----\[Logging in user ...     \] *, <InfoLine#1>,", line)
+                    if stucklogin:
+                        print('+ STUCK LOGGING IN DETECTED')
+                        rebootStuck = True
+                    if banner:
+                        print('+ SUCCESS: Cleared Login Banner on ' + str(ip))
+                        resultsDict['Login Banners Acknowledged'] += 1
+                        chan.send('sendKey 115 2\n') # Press OK button (SoftKey1)
+                        while not chan.recv_ready():
+                            time.sleep(3)
+                        out = chan.recv(9999)
+                    if okbutton and not bannerFound:
+                        print('+ SUCCESS: OK button pressed for non-login banner reason on ' + str(ip))
+                        chan.send('sendKey 115 2\n') # Press OK button (SoftKey1)
+                        while not chan.recv_ready():
+                            time.sleep(3)
+                        out = chan.recv(9999)
 
 
-            # Screen Grab Command for Window data file or auto login configs
-            if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg']:
+            # Screen Grab Command for Window data file or auto login configs or CSV to get phone numbers
+            if performActionsDict['do_get_screen'] or performActionsDict['do_generate_confg'] or performActionsDict['do_generate_csv']:
                 chan.send('reportWindowData\n')
                 while not chan.recv_ready():
                     time.sleep(3)
@@ -341,6 +370,17 @@ def mainActions(Local_IPSet, performActionsDict):
                 phoneInfoList[ip] = phoneInfoList[ip] + phoneNums
                 resultsDict['Autologin Configs Generated'] += 1
 
+            # Get the Phone numbers from the screen for CSV even if not generating config files
+            if window and performActionsDict['do_generate_csv'] and not phoneNums:
+                for line in window.decode("ascii").splitlines():
+                    m = re.search("----\[([0-9][0-9][0-9]*)\] *, <LineKey#([1-8])", line)
+                    if m:
+                        phoneNums.append(m.group(1))
+                phoneNums.reverse()
+                phoneInfoList[ip] = phoneInfoList[ip] + phoneNums
+
+                
+
 
 
 
@@ -375,7 +415,9 @@ def mainActions(Local_IPSet, performActionsDict):
         f = open(outputpath + '/' + output_csv, 'w')
         
         csvwriter = csv.writer(f)
-        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
+        # Write CSV Header Row
+        csvwriter.writerow(['IP', 'Model', 'Firmware', 'MAC', 'Subnet Mask', 'Default Gateway', 'Prov Server', 'Prov Proto', 'DHCP Server', 'VLAN Status', 'VLAN ID' , 'PhoneNum1','PhoneNum2','PhoneNum3','PhoneNum4','PhoneNum5','PhoneNum6'])
+        # Write Rows for each IP (phone) in dictionary.
         for key in phoneInfoList.keys():
             data = [key]
             data = data + phoneInfoList[key]
@@ -638,7 +680,7 @@ def pingIPs(Local_IPSet):
     csvwriter.writerow(['IP', 'Ping'])
     
     for ip in Local_IPSet:
-        response = system("ping -c 1 -W 1 " + ip + " > /dev/null 2>&1")
+        response = system("ping -c 2 -W 1 " + ip + " > /dev/null 2>&1")
         status = True
         if not response == 0:
             print('- Ping Failed to: ' + str(ip))
@@ -692,7 +734,7 @@ def print_do_menu():
     }
 
     terminal_menu = TerminalMenu(
-        ["Acknowledge Login Banner","Generate Phone Info CSV (IP, Model, MAC, FW Version)", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
+        ["Acknowledge Login Banner or Press OK","Generate Phone Info CSV", "Get Phone Screen", "Generate Autologin Configs", "Clear Phone Logs", "Reboot Phone", "Reboot Phone if stuck logging in"],
         # Taking , "Reboot Phone if stuck logging in" out of list for now. May implement later.
         multi_select=True,
         show_multi_select_hint=True,
