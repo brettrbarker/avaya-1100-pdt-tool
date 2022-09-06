@@ -8,7 +8,7 @@
 ## USAGE: python3 pdt-tool.py -f [csv input file]
 ## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.3
+## Version: 2.0.4
 ## Updated: 2022-09-05
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
@@ -36,7 +36,7 @@
 ## 2.0.1 - Added 1 second timeout to ping command. Returns faster from failed pings. 
 ## 2.0.2 - Version bump for new readme file.
 ## 2.0.3 - Added much more info the CSV file generated and changed the Login banner button to press any OK button.
-## 
+## 2.0.4 - Added provisioning server path to csv. Added new requirement.txt.
 ########################################BRB####################################################
 
 from simple_term_menu import TerminalMenu
