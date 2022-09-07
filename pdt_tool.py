@@ -8,8 +8,8 @@
 ## USAGE: python3 pdt-tool.py -f [csv input file]
 ## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.4
-## Updated: 2022-09-05
+## Version: 2.0.5
+## Updated: 2022-09-06
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -37,6 +37,7 @@
 ## 2.0.2 - Version bump for new readme file.
 ## 2.0.3 - Added much more info the CSV file generated and changed the Login banner button to press any OK button.
 ## 2.0.4 - Added provisioning server path to csv. Added new requirement.txt.
+## 2.0.5 - Bug fix on getting VLAN ID
 ########################################BRB####################################################
 
 from simple_term_menu import TerminalMenu
