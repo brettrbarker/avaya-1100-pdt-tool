@@ -240,7 +240,7 @@ def mainActions(Local_IPSet, performActionsDict):
         print('--Phone Info CSV--')
         print('Input custom string for the beginning of the CSV filename. Leave blank for default.')
         customFilename = input('Enter string: ')
-        customFilename = re.sub('[\W_]+', '', customFilename) # Filter for only letters and numbers
+        customFilename = ''.join(e for e in customFilename if e.isalnum()) # Filter for only letters and numbers
         customFilename = customFilename[:15] # Limit to 15 characters
 
     clear()
