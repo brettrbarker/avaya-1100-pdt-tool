@@ -8,8 +8,8 @@
 ## USAGE: python3 pdt-tool.py -f [csv input file]
 ## EXAMPLE: python3 pdt-tool.py -f sample-csv.csv
 ## 
-## Version: 2.0.5
-## Updated: 2022-09-06
+## Version: 2.0.6
+## Updated: 2022-09-08
 ## Author: Brett Barker - brett.barker@brbtechsolutions.com 
 ##
 ## CHANGELOG:
@@ -38,6 +38,7 @@
 ## 2.0.3 - Added much more info the CSV file generated and changed the Login banner button to press any OK button.
 ## 2.0.4 - Added provisioning server path to csv. Added new requirement.txt.
 ## 2.0.5 - Bug fix on getting VLAN ID
+## 2.0.6 - Add prompt for custom filename for CSV
 ########################################BRB####################################################
 
 from simple_term_menu import TerminalMenu
@@ -209,6 +210,7 @@ def mainActions(Local_IPSet, performActionsDict):
     windowData_file = 'window-data-' + now.strftime('%Y-%m-%d-%H%M') + '.txt'
     genConfig = False
     phoneNums = []
+    customFilename = ''
 
 # Prep Info for Auto Login Configs
     if performActionsDict['do_generate_confg']:
@@ -233,6 +235,13 @@ def mainActions(Local_IPSet, performActionsDict):
         outputpath = "output_files"
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
         f_grab = open(outputpath + '/' + windowData_file, 'w')
+
+    if performActionsDict['do_generate_csv']:
+        print('--Phone Info CSV--')
+        print('Input custom string for the beginning of the CSV filename. Leave blank for default.')
+        customFilename = input('Enter string: ')
+        customFilename = re.sub('[\W_]+', '', customFilename) # Filter for only letters and numbers
+        customFilename = customFilename[:15] # Limit to 15 characters
 
     clear()
     print('Running Actions... Please Wait')
@@ -409,7 +418,10 @@ def mainActions(Local_IPSet, performActionsDict):
    # Phone Info CSV
     if performActionsDict['do_generate_csv']:
         #print('inside IF LOOP for CSV')
-        output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+        if customFilename:
+            output_csv = str(customFilename) + '-phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
+        else:
+            output_csv = 'phone-info-' + now.strftime('%Y-%m-%d-%H%M') + '.csv'
         outputpath = "output_files"
         makedirs(outputpath, exist_ok = True) # Make output directory if it doesn't exist.
         f = open(outputpath + '/' + output_csv, 'w')
