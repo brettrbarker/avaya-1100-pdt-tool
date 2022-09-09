@@ -130,13 +130,13 @@ Welcome to the unofficial Avaya 1100 Series PDT Tool
      Log File: pdt-tool-logs/pdt-tool-2022-04-30-1707.log
 ----------------------------------------------------
 Choose actions to perform:
-  [*] Acknowledge Login Banner                                                                                                   
-  [*] Generate Phone Info CSV (IP, Model, MAC, FW Version)                                                                       
-> [*] Get Phone Screen                                                                                                           
-  [ ] Generate Autologin Configs                                                                                                 
-  [ ] Clear Phone Logs                                                                                                           
-  [ ] Reboot Phone                                                                                                               
-  [ ] Reboot Phone if stuck logging in                                                                                           
+  [*] Acknowledge Login Banner
+  [*] Generate Phone Info CSV
+> [*] Get Phone Screen
+  [ ] Generate Autologin Configs
+  [ ] Clear Phone Logs
+  [ ] Reboot Phone
+  [ ] Reboot Phone if stuck logging in
 Press <space>, <tab> for multi-selection and <enter> to select and accept 
 ```
 
@@ -145,12 +145,9 @@ Press <space>, <tab> for multi-selection and <enter> to select and accept
 ```
 This will acknowledge the login banner only if a phone is stuck at a login banner asking the user to press OK. If the phone is not at the login banner, this option does not do anything. This is helpful if you are trying to generate autologin configs that needs to be able to read the screen data after the login banner.
 ```
-> [*] Generate Phone Info CSV (IP, Model, MAC, FW Version) 
+> [*] Generate Phone Info CSV 
 ```
-This option will generate a Comma Separated CSV file with information about the phone including IP address, Model (ex. 1120 vs 1140), MAC address, and firmware version.
-
-** If you also select the "Generated Autologin Configs" option along with the CSV, then the phone numbers on the phone will also be included in the CSV file.
-
+This option will generate a Comma Separated CSV file with information about the phone including IP address, Model (ex. 1120 vs 1140), firmware version, MAC address, Subnet Mask, Default Gateway, Provisioning Server Address, Provisioning Server Protocol, Provisioning Server Path, DHCP Server Address, VLAN Status, VLAN ID, and the phone numbers on the phone.
 ```
 > [*] Get Phone Screen
 ```
