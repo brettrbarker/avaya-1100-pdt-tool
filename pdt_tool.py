@@ -282,7 +282,7 @@ def mainActions(Local_IPSet, performActionsDict):
                     time.sleep(3)
                 out = chan.recv(9999) # receive data from netinfo
                 # regex search netinfo to parse output
-                mNetinfo = re.search('.*Netmask = (.*)\r\nDefalt gateway ip address = (.*)\r\n\r\n-------Provisioning.*Provisioning server name: (.*)\r\nProvisioning protocol: (.*)\r\nProvisioning port.*Provisioning server path: (.*)\r\nProvisioning user.*DHCP address = (.*)\r\nDHCP respond.*Voice Vlan ID is set to (.*), VLAN ID is ([0-9]*).*\r\n', out.decode("ascii"), flags=re.DOTALL)
+                mNetinfo = re.search('.*Netmask = (.*)\r\nDefalt gateway ip address = (.*)\r\n\r\n-------Provisioning.*Provisioning server name: (.*)\r\nProvisioning protocol: (.*)\r\nProvisioning port.*Provisioning server path: (.*)\r\nProvisioning user.*DHCP address = (.*)\r\nDHCP respond.*Voice Vlan ID is (.*), VLAN ID is ([0-9]*).*\r\n', out.decode("ascii"), flags=re.DOTALL)
                 for x in range(1,9):
                     phoneInfoList[ip].append(mNetinfo.group(x))
 
