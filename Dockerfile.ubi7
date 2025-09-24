@@ -1,0 +1,33 @@
+# Author: mail@piotrkowalski.info
+# Originally written for Fedora-Dockerfiles by
+#   scollier <scollier@redhat.com>
+# Modified for RHEL UBI 7
+
+FROM registry.access.redhat.com/ubi7/ubi:latest
+
+# Install required packages
+RUN yum -y update && \
+    yum -y install openssh-server openssh-clients passwd python3 && \
+    yum clean all
+
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip
+
+# Create SSH directory
+RUN mkdir /var/run/sshd
+
+# Generate SSH host keys
+RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N ''
+
+# Copy the application files
+COPY . /app
+WORKDIR /app
+
+# Install Python dependencies from the rhel7 offline dependencies
+RUN pip3 install --no-index --find-links dependencies/rhel7/ -r requirements.txt
+
+# Make the script executable
+RUN chmod +x pdt_tool.py
+
+# Default command
+CMD ["/bin/bash"]

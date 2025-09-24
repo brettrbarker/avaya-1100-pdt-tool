@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  avaya-pdt-tool:
+    build:
+      context: .
+      dockerfile: Dockerfile.ubi7
+    container_name: avaya-pdt-ubi7
+    volumes:
+      - ./:/app:Z
+      - ./output:/app/output:Z
+      - ./pdt-tool-logs:/app/pdt-tool-logs:Z
+      - ./phone-configs:/app/phone-configs:Z
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    network_mode: host
+    restart: "no"
+    # Podman-specific settings
+    security_opt:
+      - label=disable  # Alternative to :Z volume flag
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m

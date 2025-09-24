@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  avaya-pdt-tool:
+    build:
+      context: .
+      dockerfile: Dockerfile.ubi7
+    container_name: avaya-pdt-ubi7
+    volumes:
+      - ./:/app
+      - ./output:/app/output  # Mount for output files
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    network_mode: host  # Allows access to network for SSH connections to phones
